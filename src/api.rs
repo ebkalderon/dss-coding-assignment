@@ -14,22 +14,22 @@ mod text;
 /// An API response containing home menu data.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Home {
-    data: BTreeMap<String, Collection>,
+    pub data: BTreeMap<String, Collection>,
 }
 
 /// An API response containing data for a curated set.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RefSet {
-    data: BTreeMap<String, Set>,
+    pub data: BTreeMap<String, Set>,
 }
 
 /// A generic collection of menu data.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Collection {
+pub struct Collection {
     /// Indicates the collection kind and any custom fields.
     #[serde(flatten)]
-    kind: CollectionKind,
+    inner: CollectionInner,
     /// Image tiles to be displayed, keyed by name.
     #[serde(default)]
     image: BTreeMap<String, ImageTile>,
@@ -40,20 +40,61 @@ struct Collection {
     video_art: Vec<VideoArt>,
 }
 
-/// A list of valid menu collection types.
+impl Collection {
+    /// Returns the kind of collection this is.
+    pub fn kind(&self) -> CollectionKind {
+        match self.inner {
+            CollectionInner::DmcSeries { .. } => CollectionKind::DmcSeries,
+            CollectionInner::DmcVideo { .. } => CollectionKind::DmcVideo,
+            CollectionInner::StandardCollection { .. } => CollectionKind::Standard,
+        }
+    }
+
+    /// Returns the elements within the collection, if any.
+    ///
+    /// Returns `Some` if this is a standard collection or `None` otherwise.
+    pub fn containers(&self) -> Option<&[Container]> {
+        match self.inner {
+            CollectionInner::StandardCollection { ref containers, .. } => Some(containers),
+            _ => None,
+        }
+    }
+
+    /// Returns the associated image data to be displayed, if any, keyed by name.
+    ///
+    /// Standard collections _usually_ do not have images associated with them.
+    pub fn images(&self) -> &BTreeMap<String, ImageTile> {
+        &self.image
+    }
+
+    /// Returns the associated text data to be displayed, if any.
+    pub fn text(&self) -> &Text {
+        &self.text
+    }
+}
+
+/// A list of valid collection types.
+#[derive(Debug, PartialEq)]
+pub enum CollectionKind {
+    /// Indicates a series of videos, e.g. a television series.
+    DmcSeries,
+    /// Indicates a single video, e.g. a movie.
+    DmcVideo,
+    /// Contains several kinds of collections.
+    Standard,
+}
+
+/// A list of special collection-specific fields.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
-enum CollectionKind {
-    /// Indicates a series of videos, e.g. a television series.
+enum CollectionInner {
     #[serde(rename_all = "camelCase")]
     DmcSeries {
         series_id: Uuid,
         encoded_series_id: String,
     },
-    /// Indicates a single video, e.g. a movie.
     #[serde(rename_all = "camelCase")]
     DmcVideo { program_type: ProgramType },
-    /// Contains several collections.
     #[serde(rename_all = "camelCase")]
     StandardCollection {
         /// Unique ID of the standard collection.
@@ -75,14 +116,14 @@ enum ProgramType {
 
 /// A menu container containing a set of items.
 #[derive(Debug, Serialize, Deserialize)]
-struct Container {
-    set: Set,
+pub struct Container {
+    pub set: Set,
 }
 
 /// A set of menu items to display.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
-enum Set {
+pub enum Set {
     /// A curated set of menu items.
     #[serde(alias = "PersonalizedCuratedSet")]
     CuratedSet {
@@ -100,7 +141,7 @@ enum Set {
 
 /// Contains metadata for a curated set.
 #[derive(Debug, Serialize, Deserialize)]
-struct Meta {
+pub struct Meta {
     hits: u32,
     offset: u16,
     page_size: u32,
