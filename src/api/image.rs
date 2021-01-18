@@ -1,7 +1,6 @@
 //! Data structures for image tiles.
 
-use std::collections::HashMap;
-
+use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 
 /// An image tile scaled to fit several aspect ratios.

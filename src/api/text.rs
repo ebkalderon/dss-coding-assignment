@@ -1,7 +1,6 @@
 //! Data structures for text data.
 
-use std::collections::HashMap;
-
+use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 
 /// Node containing text data to display.

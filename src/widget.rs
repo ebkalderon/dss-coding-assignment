@@ -1,8 +1,7 @@
 //! Generic code for implementing UI widgets.
 
-use std::collections::HashMap;
-
 use anyhow::Error;
+use fnv::FnvHashMap as HashMap;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
@@ -38,7 +37,7 @@ pub struct Widgets<W> {
 impl<W: Widget> Widgets<W> {
     /// Creates a new [`Widgets`] cache anchored relative to the given `root_widget`.
     pub fn new(root_widget: W) -> Self {
-        let mut cache = HashMap::new();
+        let mut cache = HashMap::default();
         cache.insert(WidgetId(0), CacheEntry::new(root_widget, WidgetId(0)));
         Widgets { cache, next_id: 1 }
     }

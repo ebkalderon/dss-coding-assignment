@@ -3,8 +3,7 @@
 pub use self::image::{ImageContent, ImageTile};
 pub use self::text::{Language, Text, TextContent, TitleKind, Titles};
 
-use std::collections::BTreeMap;
-
+use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -14,13 +13,13 @@ mod text;
 /// An API response containing home menu data.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Home {
-    pub data: BTreeMap<String, Collection>,
+    pub data: HashMap<String, Collection>,
 }
 
 /// An API response containing data for a curated set.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RefSet {
-    pub data: BTreeMap<String, Set>,
+    pub data: HashMap<String, Set>,
 }
 
 /// A generic collection of menu data.
@@ -32,7 +31,7 @@ pub struct Collection {
     inner: CollectionInner,
     /// Image tiles to be displayed, keyed by name.
     #[serde(default)]
-    image: BTreeMap<String, ImageTile>,
+    image: HashMap<String, ImageTile>,
     /// Text data to be displayed.
     text: Text,
     /// Miniature video art for the collection, if any.
@@ -63,7 +62,7 @@ impl Collection {
     /// Returns the associated image data to be displayed, if any, keyed by name.
     ///
     /// Standard collections _usually_ do not have images associated with them.
-    pub fn images(&self) -> &BTreeMap<String, ImageTile> {
+    pub fn images(&self) -> &HashMap<String, ImageTile> {
         &self.image
     }
 
