@@ -6,6 +6,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
 mod api;
+mod widget;
 
 fn main() -> anyhow::Result<()> {
     let context = sdl2::init().map_err(Error::msg)?;
