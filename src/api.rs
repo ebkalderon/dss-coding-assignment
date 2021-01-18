@@ -1,7 +1,7 @@
 //! Data structures for parsing DSS API responses.
 
 pub use self::image::{ImageContent, ImageTile};
-pub use self::text::{Language, Text, TextContent, Titles};
+pub use self::text::{Language, Text, TextContent, TitleKind, Titles};
 
 use std::collections::BTreeMap;
 
