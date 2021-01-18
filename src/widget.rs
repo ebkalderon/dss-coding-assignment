@@ -20,7 +20,7 @@ pub trait Widget {
 #[derive(Debug)]
 pub struct Properties {
     /// The top-left (X, Y) coordinate pair denoting the widget's location.
-    pub origin: (u32, u32),
+    pub origin: (i32, i32),
     /// Width and height of the widget, in pixels.
     pub bounds: (u32, u32),
     /// Base color of the widget.
@@ -92,7 +92,7 @@ impl<W: Widget> Widgets<W> {
         let (width, height) = widget.properties().bounds;
 
         let texture = widget.draw(canvas)?;
-        let dst = Rect::new(x as i32, y as i32, width, height);
+        let dst = Rect::new(x, y, width, height);
         canvas.copy(&texture, None, dst).map_err(Error::msg)?;
 
         for child_id in self.get_children_of(id) {
