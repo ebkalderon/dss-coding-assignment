@@ -1,4 +1,4 @@
-//! Data structures for parsing DSS API responses.
+//! Types for deserializing DSS API responses.
 
 pub use self::image::{ImageContent, ImageTile};
 pub use self::text::{Language, Text, TextContent, TitleKind, Titles};

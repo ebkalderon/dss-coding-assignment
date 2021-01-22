@@ -1,4 +1,4 @@
-//! Data structures for image tiles.
+//! Types for deserializing image tile data.
 
 use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};

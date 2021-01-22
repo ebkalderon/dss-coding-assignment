@@ -1,4 +1,4 @@
-//! Data structures for text data.
+//! Types for deserializing text data.
 
 use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};
