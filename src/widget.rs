@@ -144,21 +144,23 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     }
 
     fn draw_widget(&mut self, id: WidgetId, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
-        {
-            let widget = self.cache[&id].widget.borrow();
-            let (x, y) = widget.properties().origin;
-            let (width, height) = widget.properties().bounds;
+        let (widget, texture) = self
+            .cache
+            .get_mut(&id)
+            .map(|e| (e.widget.get_mut(), &mut e.texture))
+            .unwrap();
 
-            // Retrieve base widget texture, resizing if bounds have changed.
-            let textures = &mut self.textures;
-            let mut widget_texture = self.cache[&id].texture.borrow_mut();
-            let target = widget_texture.create_or_resize(textures.creator, width, height)?;
+        let (x, y) = widget.properties().origin;
+        let (width, height) = widget.properties().bounds;
 
-            // Draw the widget to the target texture and copy it to the canvas.
-            widget.draw(&mut Context { canvas, textures }, target)?;
-            let dst = Rect::new(x, y, width, height);
-            canvas.copy(target, None, dst).map_err(Error::msg)?;
-        }
+        // Retrieve base widget texture, resizing if bounds have changed.
+        let textures = &mut self.textures;
+        let target = texture.create_or_resize(textures.creator, width, height)?;
+
+        // Draw the widget to the target texture and copy it to the canvas.
+        widget.draw(&mut Context { canvas, textures }, target)?;
+        let dst = Rect::new(x, y, width, height);
+        canvas.copy(target, None, dst).map_err(Error::msg)?;
 
         for child_id in self.get_children_of(id).to_vec() {
             if child_id != id {
@@ -180,7 +182,7 @@ pub struct WidgetId(u32);
 #[derive(Debug)]
 struct CacheEntry<'tc, W> {
     widget: RefCell<W>,
-    texture: RefCell<WidgetTexture<'tc>>,
+    texture: WidgetTexture<'tc>,
     parent: WidgetId,
     children: Vec<WidgetId>,
 }
@@ -189,7 +191,7 @@ impl<'tc, W> CacheEntry<'tc, W> {
     fn new(widget: W, parent: WidgetId) -> Self {
         CacheEntry {
             widget: RefCell::new(widget),
-            texture: RefCell::new(WidgetTexture::default()),
+            texture: WidgetTexture::default(),
             parent,
             children: Vec::new(),
         }
