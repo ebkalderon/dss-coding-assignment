@@ -42,7 +42,7 @@ pub struct Widgets<'tc, W> {
 
 impl<'tc, W: Widget> Widgets<'tc, W> {
     /// Creates a new [`Widgets`] cache anchored relative to the given `root_widget`.
-    pub fn new(root_widget: W, textures: &'tc TextureCreator<WindowContext>) -> Self {
+    pub(crate) fn new(root_widget: W, textures: &'tc TextureCreator<WindowContext>) -> Self {
         let mut cache = HashMap::default();
         cache.insert(WidgetId(0), CacheEntry::new(root_widget, WidgetId(0)));
         Widgets {
