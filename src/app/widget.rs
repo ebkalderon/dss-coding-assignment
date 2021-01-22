@@ -70,7 +70,7 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
         }
     }
 
-    /// Returns the [`WidgetId`] of the root widget.
+    /// Returns the unique ID of the root widget.
     pub fn root(&self) -> WidgetId {
         WidgetId(0)
     }
