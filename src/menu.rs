@@ -4,11 +4,10 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::{Canvas, Texture};
-use sdl2::video::Window;
+use sdl2::render::Texture;
 
 use crate::app::{Action, State};
-use crate::widget::{Properties, Widget, Widgets};
+use crate::widget::{Context, Properties, Widget, Widgets};
 
 const BACKGROUND_COLOR: Color = Color::RGB(8, 76, 97);
 const TILE_COLOR: Color = Color::RGB(23, 126, 127);
@@ -86,11 +85,11 @@ impl Widget for WidgetKind {
         }
     }
 
-    fn draw(&self, canvas: &mut Canvas<Window>, texture: &mut Texture) -> anyhow::Result<()> {
+    fn draw(&self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()> {
         match *self {
             WidgetKind::Root { ref properties } => {
                 let Properties { color, .. } = properties;
-                canvas.with_texture_canvas(texture, |texture| {
+                ctx.canvas.with_texture_canvas(target, |texture| {
                     texture.set_draw_color(*color);
                     texture.clear();
                 })?
@@ -99,7 +98,7 @@ impl Widget for WidgetKind {
                 let (x, y) = properties.origin;
                 let (width, height) = properties.bounds;
                 let rect = Rect::new(x, y, width, height);
-                canvas.with_texture_canvas(texture, |texture| {
+                ctx.canvas.with_texture_canvas(target, |texture| {
                     texture.set_draw_color(properties.color);
                     texture.draw_rect(rect).unwrap();
                     texture.clear();

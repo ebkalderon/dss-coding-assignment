@@ -5,7 +5,7 @@ use sdl2::event::Event;
 use sdl2::video::Window;
 use sdl2::Sdl;
 
-use crate::widget::{Widget, Widgets};
+use crate::widget::{Textures, Widget, Widgets};
 
 /// An action to take upon receiving an SDL event.
 #[derive(Clone, Copy, Debug)]
@@ -59,7 +59,7 @@ impl<W: Widget, S: State<W>> App<W, S> {
         let mut canvas = window.into_canvas().accelerated().present_vsync().build()?;
 
         let texture_creator = canvas.texture_creator();
-        let mut widgets = Widgets::new(self.root_widget, &texture_creator);
+        let mut widgets = Widgets::new(self.root_widget, Textures::new(&texture_creator));
 
         // Build and populate the `Widgets` cache.
         self.state.initialize(&mut widgets)?;

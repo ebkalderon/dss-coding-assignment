@@ -2,6 +2,7 @@
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{self, Debug, Formatter};
+use std::path::PathBuf;
 
 use anyhow::Error;
 use fnv::FnvHashMap as HashMap;
@@ -19,7 +20,7 @@ pub trait Widget {
     fn properties_mut(&mut self) -> &mut Properties;
 
     /// Renders the widget into the given [`Texture`](sdl2::render::Texture).
-    fn draw(&self, canvas: &mut Canvas<Window>, texture: &mut Texture) -> anyhow::Result<()>;
+    fn draw(&self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()>;
 }
 
 /// Contains properties common to all widgets.
@@ -33,16 +34,32 @@ pub struct Properties {
     pub color: Color,
 }
 
+/// A shared context passed to every [`Widget::draw()`] call.
+pub struct Context<'a, 'tc> {
+    /// Handle to the window canvas.
+    pub canvas: &'a mut Canvas<Window>,
+    /// Shared texture cache.
+    pub textures: &'a mut Textures<'tc>,
+}
+
+impl<'a, 'tc> Debug for Context<'a, 'tc> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct(stringify!(Context))
+            .field("textures", &self.textures)
+            .finish()
+    }
+}
+
 /// A shared cache of drawable UI widgets.
 pub struct Widgets<'tc, W> {
     cache: HashMap<WidgetId, CacheEntry<'tc, W>>,
     next_id: u32,
-    textures: &'tc TextureCreator<WindowContext>,
+    textures: Textures<'tc>,
 }
 
 impl<'tc, W: Widget> Widgets<'tc, W> {
     /// Creates a new [`Widgets`] cache anchored relative to the given `root_widget`.
-    pub(crate) fn new(root_widget: W, textures: &'tc TextureCreator<WindowContext>) -> Self {
+    pub(crate) fn new(root_widget: W, textures: Textures<'tc>) -> Self {
         let mut cache = HashMap::default();
         cache.insert(WidgetId(0), CacheEntry::new(root_widget, WidgetId(0)));
         Widgets {
@@ -116,7 +133,7 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     }
 
     /// Renders all the widgets in the cache to the canvas.
-    pub fn draw(&self, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
+    pub fn draw(&mut self, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
         canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
         canvas.clear();
 
@@ -126,23 +143,26 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
         Ok(())
     }
 
-    fn draw_widget(&self, id: WidgetId, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
-        let widget = self.get(id);
-        let (x, y) = widget.properties().origin;
-        let (width, height) = widget.properties().bounds;
+    fn draw_widget(&mut self, id: WidgetId, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
+        {
+            let widget = self.cache[&id].widget.borrow();
+            let (x, y) = widget.properties().origin;
+            let (width, height) = widget.properties().bounds;
 
-        // Retrieve base widget texture, resizing if bounds have changed.
-        let mut widget_texture = self.cache[&id].texture.borrow_mut();
-        let texture = widget_texture.create_or_resize(&self.textures, width, height)?;
+            // Retrieve base widget texture, resizing if bounds have changed.
+            let textures = &mut self.textures;
+            let mut widget_texture = self.cache[&id].texture.borrow_mut();
+            let target = widget_texture.create_or_resize(textures.creator, width, height)?;
 
-        // Draw the widget to the texture and copy the texture to the canvas.
-        widget.draw(canvas, texture)?;
-        let dst = Rect::new(x, y, width, height);
-        canvas.copy(&*texture, None, dst).map_err(Error::msg)?;
+            // Draw the widget to the target texture and copy it to the canvas.
+            widget.draw(&mut Context { canvas, textures }, target)?;
+            let dst = Rect::new(x, y, width, height);
+            canvas.copy(target, None, dst).map_err(Error::msg)?;
+        }
 
-        for child_id in self.get_children_of(id) {
-            if *child_id != id {
-                self.draw_widget(*child_id, canvas)?;
+        for child_id in self.get_children_of(id).to_vec() {
+            if child_id != id {
+                self.draw_widget(child_id, canvas)?;
             }
         }
 
@@ -166,7 +186,6 @@ struct CacheEntry<'tc, W> {
 }
 
 impl<'tc, W> CacheEntry<'tc, W> {
-    /// Creates and returns a new `CacheEntry` with an empty texture.
     fn new(widget: W, parent: WidgetId) -> Self {
         CacheEntry {
             widget: RefCell::new(widget),
@@ -220,6 +239,48 @@ impl<'tc> Debug for WidgetTexture<'tc> {
         f.debug_struct(stringify!(WidgetTexture))
             .field("width", &self.width)
             .field("height", &self.height)
+            .finish()
+    }
+}
+
+/// A shared mechanism for caching textures.
+///
+/// This struct is accessible from the shared [`Context`] passed to every [`Widget::draw()`] call.
+pub struct Textures<'tc> {
+    creator: &'tc TextureCreator<WindowContext>,
+    cache: HashMap<PathBuf, Texture<'tc>>,
+}
+
+impl<'tc> Textures<'tc> {
+    pub(crate) fn new(creator: &'tc TextureCreator<WindowContext>) -> Self {
+        Textures {
+            creator,
+            cache: HashMap::default(),
+        }
+    }
+
+    /// Returns a [`Texture`](sdl2::render::Texture) from an image file, caching it in memory.
+    ///
+    /// Returns `Err` if the image file could not be found at the destination `path`, or if SDL was
+    /// unable to load the file successfully.
+    pub fn load_from<P: Into<PathBuf>>(&mut self, path: P) -> anyhow::Result<&Texture<'tc>> {
+        use sdl2::image::LoadTexture;
+        use std::collections::hash_map::Entry;
+
+        match self.cache.entry(path.into()) {
+            Entry::Occupied(e) => Ok(e.into_mut()),
+            Entry::Vacant(e) => {
+                let texture = self.creator.load_texture(e.key()).map_err(Error::msg)?;
+                Ok(e.insert(texture))
+            }
+        }
+    }
+}
+
+impl<'tc> Debug for Textures<'tc> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct(stringify!(Textures))
+            .field("cache", &self.cache.keys())
             .finish()
     }
 }
