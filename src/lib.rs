@@ -3,4 +3,3 @@
 pub mod app;
 pub mod menu;
 pub mod schema;
-pub mod widget;

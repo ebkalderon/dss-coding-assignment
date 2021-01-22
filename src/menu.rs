@@ -8,9 +8,8 @@ use sdl2::rect::Rect;
 use sdl2::render::Texture;
 use sdl2::ttf::FontStyle;
 
-use crate::app::{Action, State};
+use crate::app::{Action, Context, Properties, State, Widget, Widgets};
 use crate::schema::{Home, TitleKind};
-use crate::widget::{Context, Properties, Widget, Widgets};
 
 const BACKGROUND_COLOR: Color = Color::RGB(7, 27, 15);
 const RIGHT_MARGIN: i32 = 52;
@@ -106,7 +105,7 @@ impl State<WidgetKind> for Menu {
     }
 }
 
-/// A list of types which implement the [`Widget`](crate::widget::Widget) trait.
+/// A list of types which implement the [`Widget`](crate::app::Widget) trait.
 #[derive(Debug)]
 pub enum WidgetKind {
     Root {

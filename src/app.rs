@@ -1,11 +1,13 @@
 //! Application state management and main loop.
 
+pub use self::widget::{Context, Properties, Text, Textures, Widget, WidgetId, Widgets};
+
 use anyhow::Error;
 use sdl2::event::Event;
 use sdl2::video::Window;
 use sdl2::Sdl;
 
-use crate::widget::{Textures, Widget, Widgets};
+mod widget;
 
 /// An action to take upon receiving an SDL event.
 #[derive(Clone, Copy, Debug)]
@@ -30,7 +32,7 @@ pub trait State<W: Widget> {
     /// Returns an [`Action`] specifying whether the application should continue to run or quit.
     ///
     /// This trait method is _provided_. If it is not implemented, this method will do nothing and
-    /// always return `Action::Continue`].
+    /// always return [`Action::Continue`].
     fn handle_event(&mut self, _event: &Event, _widgets: &mut Widgets<W>) -> Action {
         Action::Continue
     }
