@@ -62,3 +62,9 @@ To generate HTML documentation for the public crate API, run:
 ```bash
 cargo doc --open
 ```
+
+## Credits
+
+Includes the [Cocogoose Pro Font Family], which is free for personal use.
+
+[Cocogoose Pro]: https://www.1001fonts.com/cocogoose-pro-font.html
