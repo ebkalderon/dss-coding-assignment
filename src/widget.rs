@@ -2,13 +2,14 @@
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{self, Debug, Formatter};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Error;
 use fnv::FnvHashMap as HashMap;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::ttf::{FontStyle, Sdl2TtfContext};
 use sdl2::video::{Window, WindowContext};
 
 /// A trait which describes a rectangular UI widget.
@@ -251,21 +252,23 @@ impl<'tc> Debug for WidgetTexture<'tc> {
 pub struct Textures<'tc> {
     creator: &'tc TextureCreator<WindowContext>,
     cache: HashMap<PathBuf, Texture<'tc>>,
+    ttf_ctx: Sdl2TtfContext,
 }
 
 impl<'tc> Textures<'tc> {
-    pub(crate) fn new(creator: &'tc TextureCreator<WindowContext>) -> Self {
-        Textures {
+    pub(crate) fn new(creator: &'tc TextureCreator<WindowContext>) -> anyhow::Result<Self> {
+        Ok(Textures {
             creator,
             cache: HashMap::default(),
-        }
+            ttf_ctx: sdl2::ttf::init()?,
+        })
     }
 
     /// Returns a [`Texture`](sdl2::render::Texture) from an image file, caching it in memory.
     ///
     /// Returns `Err` if the image file could not be found at the destination `path`, or if SDL was
     /// unable to load the file successfully.
-    pub fn load_from<P: Into<PathBuf>>(&mut self, path: P) -> anyhow::Result<&Texture<'tc>> {
+    pub fn load_image<P: Into<PathBuf>>(&mut self, path: P) -> anyhow::Result<&Texture<'tc>> {
         use sdl2::image::LoadTexture;
         use std::collections::hash_map::Entry;
 
@@ -277,12 +280,73 @@ impl<'tc> Textures<'tc> {
             }
         }
     }
+
+    /// Renders some text using a TTF font loaded from `path`, caching the font file in memory.
+    ///
+    /// Returns `Err` if the font file could not be found at the destination `path`, or if SDL was
+    /// unable to load the font successfully.
+    pub fn render_text<P>(
+        &mut self,
+        path: P,
+        point_size: u16,
+        style: FontStyle,
+        props: &Properties,
+        message: &str,
+    ) -> anyhow::Result<Text<'tc>>
+    where
+        P: AsRef<Path>,
+    {
+        use sdl2::render::TextureQuery;
+
+        let mut font = self
+            .ttf_ctx
+            .load_font(path.as_ref(), point_size)
+            .map_err(Error::msg)?;
+
+        font.set_style(style);
+
+        let (max_width, _) = props.bounds;
+        let surface = font
+            .render(message)
+            .blended_wrapped(props.color, max_width)
+            .map_err(Error::msg)?;
+
+        // NOTE: This is potentially expensive to do every frame. Ideally, we should have some form
+        // of caching system which renders and caches glyphs individually for every font, and then
+        // assembles finished textures from these cached glyphs. This is much too complex for this
+        // toy project, though.
+        let texture = self.creator.create_texture_from_surface(&surface)?;
+        let TextureQuery { width, height, .. } = texture.query();
+
+        Ok(Text {
+            texture,
+            bounds: (width, height),
+        })
+    }
 }
 
 impl<'tc> Debug for Textures<'tc> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.debug_struct(stringify!(Textures))
             .field("cache", &self.cache.keys())
+            .finish()
+    }
+}
+
+/// Contains some rendered text.
+///
+/// This struct is created by [`Textures::render_text()`]. See its documentation for more.
+pub struct Text<'tc> {
+    /// Texture containing the rendered text.
+    pub texture: Texture<'tc>,
+    /// Width and height of the texture, in pixels.
+    pub bounds: (u32, u32),
+}
+
+impl<'tc> Debug for Text<'tc> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct(stringify!(Text))
+            .field("bounds", &self.bounds)
             .finish()
     }
 }
