@@ -40,16 +40,13 @@ pub trait State<W: Widget> {
 #[derive(Debug)]
 pub struct App<W, S> {
     state: S,
-    widgets: Widgets<W>,
+    root_widget: W,
 }
 
 impl<W: Widget, S: State<W>> App<W, S> {
     /// Creates a new `App` with the given application [`State`] and root widget.
     pub fn new(state: S, root_widget: W) -> Self {
-        App {
-            state,
-            widgets: Widgets::new(root_widget),
-        }
+        App { state, root_widget }
     }
 
     /// Executes the main application loop using the given [`Sdl`](sdl2::Sdl) context and
@@ -57,24 +54,27 @@ impl<W: Widget, S: State<W>> App<W, S> {
     ///
     /// Returns `Ok` when the application has exited successfully, or returns `Err` if the
     /// application failed to initialize or an SDL error was encountered.
-    pub fn run(&mut self, sdl: Sdl, window: Window) -> anyhow::Result<()> {
+    pub fn run(mut self, sdl: Sdl, window: Window) -> anyhow::Result<()> {
         let mut events = sdl.event_pump().map_err(Error::msg)?;
         let mut canvas = window.into_canvas().accelerated().present_vsync().build()?;
 
+        let texture_creator = canvas.texture_creator();
+        let mut widgets = Widgets::new(self.root_widget, &texture_creator);
+
         // Build and populate the `Widgets` cache.
-        self.state.initialize(&mut self.widgets)?;
+        self.state.initialize(&mut widgets)?;
 
         'running: loop {
             // Handle all pending SDL events.
             for event in events.poll_iter() {
-                match self.state.handle_event(&event, &mut self.widgets) {
+                match self.state.handle_event(&event, &mut widgets) {
                     Action::Continue => {}
                     Action::Quit => break 'running,
                 }
             }
 
             // Draw the next frame to the canvas.
-            self.widgets.draw(&mut canvas)?;
+            widgets.draw(&mut canvas)?;
         }
 
         Ok(())

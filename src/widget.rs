@@ -1,13 +1,14 @@
 //! Generic code for implementing UI widgets.
 
 use std::cell::{Ref, RefCell, RefMut};
+use std::fmt::{self, Debug, Formatter};
 
 use anyhow::Error;
 use fnv::FnvHashMap as HashMap;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::{Canvas, Texture};
-use sdl2::video::Window;
+use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::video::{Window, WindowContext};
 
 /// A trait which describes a rectangular UI widget.
 pub trait Widget {
@@ -17,8 +18,8 @@ pub trait Widget {
     /// Returns a mutable reference to the properties of the widget.
     fn properties_mut(&mut self) -> &mut Properties;
 
-    /// Renders the widget into a [`Texture`](sdl2::render::Texture) and returns it to the caller.
-    fn draw(&self, canvas: &mut Canvas<Window>) -> anyhow::Result<Texture>;
+    /// Renders the widget into the given [`Texture`](sdl2::render::Texture).
+    fn draw(&self, canvas: &mut Canvas<Window>, texture: &mut Texture) -> anyhow::Result<()>;
 }
 
 /// Contains properties common to all widgets.
@@ -33,18 +34,22 @@ pub struct Properties {
 }
 
 /// A shared cache of drawable UI widgets.
-#[derive(Debug)]
-pub struct Widgets<W> {
-    cache: HashMap<WidgetId, CacheEntry<W>>,
+pub struct Widgets<'tc, W> {
+    cache: HashMap<WidgetId, CacheEntry<'tc, W>>,
     next_id: u32,
+    textures: &'tc TextureCreator<WindowContext>,
 }
 
-impl<W: Widget> Widgets<W> {
+impl<'tc, W: Widget> Widgets<'tc, W> {
     /// Creates a new [`Widgets`] cache anchored relative to the given `root_widget`.
-    pub fn new(root_widget: W) -> Self {
+    pub fn new(root_widget: W, textures: &'tc TextureCreator<WindowContext>) -> Self {
         let mut cache = HashMap::default();
         cache.insert(WidgetId(0), CacheEntry::new(root_widget, WidgetId(0)));
-        Widgets { cache, next_id: 1 }
+        Widgets {
+            cache,
+            next_id: 1,
+            textures,
+        }
     }
 
     /// Returns the [`WidgetId`] of the root widget.
@@ -126,9 +131,14 @@ impl<W: Widget> Widgets<W> {
         let (x, y) = widget.properties().origin;
         let (width, height) = widget.properties().bounds;
 
-        let texture = widget.draw(canvas)?;
+        // Retrieve base widget texture, resizing if bounds have changed.
+        let mut widget_texture = self.cache[&id].texture.borrow_mut();
+        let texture = widget_texture.create_or_resize(&self.textures, width, height)?;
+
+        // Draw the widget to the texture and copy the texture to the canvas.
+        widget.draw(canvas, texture)?;
         let dst = Rect::new(x, y, width, height);
-        canvas.copy(&texture, None, dst).map_err(Error::msg)?;
+        canvas.copy(&*texture, None, dst).map_err(Error::msg)?;
 
         for child_id in self.get_children_of(id) {
             if *child_id != id {
@@ -146,19 +156,70 @@ impl<W: Widget> Widgets<W> {
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct WidgetId(u32);
 
+/// A cached widget and its associated metadata.
 #[derive(Debug)]
-struct CacheEntry<W> {
+struct CacheEntry<'tc, W> {
     widget: RefCell<W>,
+    texture: RefCell<WidgetTexture<'tc>>,
     parent: WidgetId,
     children: Vec<WidgetId>,
 }
 
-impl<W> CacheEntry<W> {
+impl<'tc, W> CacheEntry<'tc, W> {
+    /// Creates and returns a new `CacheEntry` with an empty texture.
     fn new(widget: W, parent: WidgetId) -> Self {
         CacheEntry {
             widget: RefCell::new(widget),
+            texture: RefCell::new(WidgetTexture::default()),
             parent,
             children: Vec::new(),
         }
+    }
+}
+
+/// The target texture into which a widget is rendered.
+#[derive(Default)]
+struct WidgetTexture<'tc> {
+    texture: Option<Texture<'tc>>,
+    width: u32,
+    height: u32,
+}
+
+impl<'tc> WidgetTexture<'tc> {
+    /// Returns a mutable reference to the texture, ensuring it matches the given dimensions.
+    ///
+    /// This method does _not_ allocate any memory if the texture already exists and matches the
+    /// given dimensions.
+    ///
+    /// Otherwise, a new texture which matches the given dimensions will be created using the given
+    /// [`TextureCreator`](sdl2::render::TextureCreator).
+    fn create_or_resize(
+        &mut self,
+        tc: &'tc TextureCreator<WindowContext>,
+        width: u32,
+        height: u32,
+    ) -> anyhow::Result<&mut Texture<'tc>> {
+        if self.texture.is_none() || self.width != width || self.height != height {
+            self.width = width;
+            self.height = height;
+            self.texture = tc
+                .create_texture_target(None, width, height)
+                .map(Some)
+                .map_err(Error::msg)?;
+        }
+
+        match self.texture.as_mut() {
+            Some(inner) => Ok(inner),
+            None => unreachable!(),
+        }
+    }
+}
+
+impl<'tc> Debug for WidgetTexture<'tc> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct(stringify!(WidgetTexture))
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .finish()
     }
 }
