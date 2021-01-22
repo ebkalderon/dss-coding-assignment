@@ -1,5 +1,6 @@
 //! Business logic for the application.
 
+use anyhow::anyhow;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -8,6 +9,7 @@ use sdl2::render::Texture;
 use sdl2::ttf::FontStyle;
 
 use crate::app::{Action, State};
+use crate::schema::{Home, TitleKind};
 use crate::widget::{Context, Properties, Widget, Widgets};
 
 const BACKGROUND_COLOR: Color = Color::RGB(7, 27, 15);
@@ -32,15 +34,32 @@ pub struct Menu;
 
 impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
+        // TODO: Replace local JSON with fetching from remote API.
+        let json = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/home.json"));
+        let home_menu: Home = serde_json::from_str(json)?;
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
 
-        for i in 0..11 {
+        let containers = home_menu
+            .data
+            .get("StandardCollection")
+            .ok_or(anyhow!("key `StandardCollection` does not exist"))?
+            .containers()
+            .ok_or(anyhow!("`StandardCollection` is not a standard collection"))?;
+
+        for (i, row) in containers.iter().enumerate() {
             let (label_id, label_y, label_height) = {
+                let text = row
+                    .set
+                    .text()
+                    .title
+                    .get(TitleKind::Full)
+                    .ok_or_else(|| anyhow!("Full title for collection {} not found", i))?;
+
                 let label = WidgetKind::new_label(
-                    "Collections".into(),
+                    text.content.clone(),
                     42,
                     RIGHT_MARGIN,
-                    TOP_MARGIN + (i * (TILE_HEIGHT + 156)) as i32,
+                    TOP_MARGIN + (i as u32 * (TILE_HEIGHT + 156)) as i32,
                     max_width,
                 );
 

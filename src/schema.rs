@@ -138,6 +138,16 @@ pub enum Set {
     },
 }
 
+impl Set {
+    /// Returns the associated text data to be displayed, if any.
+    pub fn text(&self) -> &Text {
+        match *self {
+            Set::CuratedSet { ref text, .. } => text,
+            Set::SetRef { ref text, .. } => text,
+        }
+    }
+}
+
 /// Contains metadata for a curated set.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Meta {
