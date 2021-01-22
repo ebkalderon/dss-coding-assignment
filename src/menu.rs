@@ -9,7 +9,7 @@ use sdl2::render::Texture;
 use crate::app::{Action, State};
 use crate::widget::{Context, Properties, Widget, Widgets};
 
-const BACKGROUND_COLOR: Color = Color::RGB(8, 76, 97);
+const BACKGROUND_COLOR: Color = Color::RGB(7, 27, 15);
 const TILE_COLOR: Color = Color::RGB(23, 126, 127);
 const TILE_WIDTH: u32 = 500;
 const TILE_HEIGHT: u32 = 281;
