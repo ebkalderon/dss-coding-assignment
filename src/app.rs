@@ -1,4 +1,4 @@
-//! Application state management and main loop.
+//! Generic abstraction for UI applications.
 
 pub use self::widget::{Context, Properties, Text, Textures, Widget, WidgetId, Widgets};
 
@@ -38,7 +38,7 @@ pub trait State<W: Widget> {
     }
 }
 
-/// Container for the main UI application.
+/// Entry point for the UI application.
 #[derive(Debug)]
 pub struct App<W, S> {
     state: S,
@@ -51,7 +51,7 @@ impl<W: Widget, S: State<W>> App<W, S> {
         App { state, root_widget }
     }
 
-    /// Executes the main application loop using the given [`Sdl`](sdl2::Sdl) context and
+    /// Executes the main loop with the given [`Sdl`](sdl2::Sdl) context and
     /// [`Window`](sdl2::video::Window) handle.
     ///
     /// Returns `Ok` when the application has exited successfully, or returns `Err` if the
