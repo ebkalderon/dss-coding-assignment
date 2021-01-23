@@ -2,10 +2,14 @@
 
 pub use self::widget::{Context, Properties, Text, Textures, Widget, WidgetId, Widgets};
 
+use std::time::{Duration, Instant};
+
 use anyhow::Error;
 use sdl2::event::Event;
 use sdl2::video::Window;
 use sdl2::Sdl;
+
+const TARGET_FRAME_RATE: u16 = 60;
 
 mod widget;
 
@@ -68,6 +72,8 @@ impl<W: Widget, S: State<W>> App<W, S> {
         self.state.initialize(&mut widgets)?;
 
         'running: loop {
+            let start = Instant::now();
+
             // Handle all pending SDL events.
             for event in events.poll_iter() {
                 match self.state.handle_event(&event, &mut widgets) {
@@ -78,6 +84,14 @@ impl<W: Widget, S: State<W>> App<W, S> {
 
             // Draw the next frame to the canvas.
             widgets.draw(&mut canvas)?;
+
+            let frame_time = start.elapsed();
+            let target_frame_time = Duration::from_secs_f64(1.0 / TARGET_FRAME_RATE as f64);
+
+            // Put the CPU to sleep to save power, if necessary.
+            if frame_time < target_frame_time {
+                std::thread::sleep(target_frame_time - frame_time);
+            }
         }
 
         Ok(())
