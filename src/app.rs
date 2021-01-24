@@ -83,7 +83,9 @@ impl<W: Widget, S: State<W>> App<W, S> {
             }
 
             // Draw the next frame to the canvas.
-            widgets.draw(&mut canvas)?;
+            if widgets.is_invalidated() {
+                widgets.draw(&mut canvas)?;
+            }
 
             let frame_time = start.elapsed();
             let target_frame_time = Duration::from_secs_f64(1.0 / TARGET_FRAME_RATE as f64);

@@ -35,6 +35,8 @@ pub struct Properties {
     pub color: Color,
     /// Indicates that the widget should not be rendered.
     pub hidden: bool,
+    /// Indicates whether the [`Widget::draw()`] method needs to be called.
+    pub invalidated: bool,
 }
 
 impl Default for Properties {
@@ -44,6 +46,7 @@ impl Default for Properties {
             bounds: (0, 0),
             color: Color::WHITE,
             hidden: false,
+            invalidated: true,
         }
     }
 }
@@ -73,9 +76,13 @@ pub struct Widgets<'tc, W> {
 
 impl<'tc, W: Widget> Widgets<'tc, W> {
     /// Creates a new [`Widgets`] cache anchored relative to the given `root_widget`.
-    pub(crate) fn new(root_widget: W, textures: Textures<'tc>) -> Self {
+    pub(crate) fn new(mut root_widget: W, textures: Textures<'tc>) -> Self {
+        // Mark the widget for initial drawing.
+        root_widget.properties_mut().invalidated = true;
+
         let mut cache = HashMap::default();
         cache.insert(WidgetId(0), CacheEntry::new(root_widget, WidgetId(0)));
+
         Widgets {
             cache,
             next_id: 1,
@@ -92,8 +99,11 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     ///
     /// Returns `None` if `parent` does not exist, otherwise returns a `Some` containing the
     /// [`WidgetId`] of the inserted widget.
-    pub fn insert(&mut self, widget: W, parent: WidgetId) -> Option<WidgetId> {
+    pub fn insert(&mut self, mut widget: W, parent: WidgetId) -> Option<WidgetId> {
         let id = WidgetId(self.next_id);
+
+        // Mark the widget for initial drawing.
+        widget.properties_mut().invalidated = true;
 
         if let Some(parent_entry) = self.cache.get_mut(&parent) {
             parent_entry.children.push(id);
@@ -146,7 +156,16 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
         }
     }
 
+    /// Returns whether any widgets have indicated that they need to be redrawn.
+    pub fn is_invalidated(&self) -> bool {
+        self.cache
+            .values()
+            .any(|e| e.widget.borrow().properties().invalidated)
+    }
+
     /// Renders all the widgets in the cache to the canvas.
+    ///
+    /// This method should only redraw widgets that requested it, for the sake of efficiency.
     pub fn draw(&mut self, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
         canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
         canvas.clear();
@@ -167,16 +186,24 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
         let (x, y) = widget.properties().origin;
         let (width, height) = widget.properties().bounds;
         let is_hidden = widget.properties().hidden;
+        let is_invalidated = widget.properties().invalidated;
 
         if !is_hidden {
             // Retrieve base widget texture, resizing if bounds have changed.
             let textures = &mut self.textures;
             let target = texture.create_or_resize(textures.creator, width, height)?;
 
-            // Draw the widget to the target texture and copy it to the canvas.
-            widget.draw(&mut Context { canvas, textures }, target)?;
+            // Draw the widget to the target texture.
+            if is_invalidated {
+                widget.draw(&mut Context { canvas, textures }, target)?;
+            }
+
+            // Copy the texture to the canvas.
             let dst = Rect::new(x, y, width, height);
             canvas.copy(target, None, dst).map_err(Error::msg)?;
+
+            // Mark the drawn widget as up-to-date.
+            widget.properties_mut().invalidated = false;
         }
 
         for child_id in self.get_children_of(id).to_vec() {
