@@ -82,6 +82,9 @@ impl<W: Widget, S: State<W>> App<W, S> {
                 }
             }
 
+            // Advance the internal state of the widgets.
+            widgets.update();
+
             // Draw the next frame to the canvas.
             if widgets.is_invalidated() {
                 widgets.draw(&mut canvas)?;

@@ -20,6 +20,9 @@ pub trait Widget {
     /// Returns a mutable reference to the properties of the widget.
     fn properties_mut(&mut self) -> &mut Properties;
 
+    /// Executes once on every frame, useful for animations or updating internal state.
+    fn update(&mut self) {}
+
     /// Renders the widget into the given [`Texture`](sdl2::render::Texture).
     fn draw(&mut self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()>;
 }
@@ -153,6 +156,13 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
             if *child_id != id {
                 self.translate(*child_id, dx, dy);
             }
+        }
+    }
+
+    /// Ticks the internal state of all widgets by one frame.
+    pub fn update(&mut self) {
+        for widget in self.cache.values_mut().map(|e| e.widget.get_mut()) {
+            widget.update();
         }
     }
 
