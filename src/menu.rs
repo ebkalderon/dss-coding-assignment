@@ -7,10 +7,11 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Texture;
 use sdl2::ttf::FontStyle;
+use url::Url;
 
 use crate::app::{Action, Context, Properties, State, Widget, Widgets};
 use crate::fetcher::Fetcher;
-use crate::schema::{Home, TitleKind};
+use crate::schema;
 
 const HOME_JSON_URL: &str = "https://cd-static.bamgrid.com/dp-117731241344/home.json";
 
@@ -45,29 +46,18 @@ impl Menu {
 
 impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
-        let path = self.fetcher.fetch(HOME_JSON_URL.parse().unwrap())?;
-        let json = std::fs::read_to_string(path)?;
-        let home_menu: Home = serde_json::from_str(&json)?;
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
 
-        let containers = home_menu
-            .data
-            .get("StandardCollection")
-            .ok_or(anyhow!("key `StandardCollection` does not exist"))?
-            .containers()
-            .ok_or(anyhow!("`StandardCollection` is not a standard collection"))?;
+        let url = HOME_JSON_URL.parse()?;
+        let home_menu = download_home_json(url, &self.fetcher)?;
+        let rows = get_menu_rows(&home_menu)?;
 
-        for (i, row) in containers.iter().enumerate() {
+        for (i, row) in rows.iter().enumerate() {
             let (label_id, label_y, label_height) = {
-                let text = row
-                    .set
-                    .text()
-                    .title
-                    .get(TitleKind::Full)
-                    .ok_or_else(|| anyhow!("Full title for collection {} not found", i))?;
+                let title = get_row_title(row, i)?;
 
                 let label = WidgetKind::new_label(
-                    text.content.clone(),
+                    title.to_owned(),
                     42,
                     RIGHT_MARGIN,
                     TOP_MARGIN + (i as u32 * (TILE_HEIGHT + 156)) as i32,
@@ -235,5 +225,53 @@ impl Widget for WidgetKind {
         }
 
         Ok(())
+    }
+}
+
+fn download_home_json(url: Url, fetcher: &Fetcher) -> anyhow::Result<schema::Home> {
+    let path = fetcher.fetch(url)?;
+    let json = std::fs::read_to_string(path)?;
+    let menu = serde_json::from_str(&json)?;
+    Ok(menu)
+}
+
+fn get_menu_rows(menu: &schema::Home) -> anyhow::Result<&[schema::Container]> {
+    menu.data
+        .get("StandardCollection")
+        .ok_or(anyhow!("key `StandardCollection` does not exist"))?
+        .containers()
+        .ok_or(anyhow!("`StandardCollection` is not a standard collection"))
+}
+
+fn get_row_title(row: &schema::Container, row_idx: usize) -> anyhow::Result<&str> {
+    row.set
+        .text()
+        .title
+        .get(schema::TitleKind::Full)
+        .ok_or_else(|| anyhow!("full title for collection {} not found", row_idx))
+        .map(|text| text.content.as_str())
+}
+
+#[cfg(test)]
+mod tests {
+    use schema::Home;
+
+    use super::*;
+
+    const HOME_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/home.json"));
+
+    #[test]
+    fn gets_menu_rows() {
+        let h: Home = serde_json::from_str(HOME_JSON).expect("failed to deserialize `home.json`");
+        let _rows = get_menu_rows(&h).expect("failed to get home menu rows");
+    }
+
+    #[test]
+    fn gets_row_title() {
+        let h: Home = serde_json::from_str(HOME_JSON).expect("failed to deserialize `home.json`");
+        let rows = get_menu_rows(&h).expect("failed to get home menu rows");
+        let (i, first) = rows.iter().enumerate().next().expect("must not be empty");
+        let title = get_row_title(&first, i).expect("failed to retrieve home menu rows");
+        assert_eq!(title, "New to Disney+");
     }
 }
