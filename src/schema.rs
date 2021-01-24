@@ -185,7 +185,8 @@ mod tests {
     #[test]
     fn parses_home_json() {
         let json = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/home.json"));
-        let _: Home = serde_json::from_str(json).expect("failed to parse `home.json`");
+        let v: Home = serde_json::from_str(json).expect("failed to parse `home.json`");
+        eprintln!("{}", serde_json::to_string_pretty(&v).unwrap());
     }
 
     #[test]
@@ -194,6 +195,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/tests/f506622c-4f75-4f87-bafe-3e08a4433914.json"
         ));
-        let _: RefSet = serde_json::from_str(json).expect("failed to parse \"ref\" set JSON");
+        let v: RefSet = serde_json::from_str(json).expect("failed to parse \"ref\" set JSON");
+        eprintln!("{}", serde_json::to_string_pretty(&v).unwrap());
     }
 }
