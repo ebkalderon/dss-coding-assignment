@@ -1,5 +1,6 @@
 use anyhow::Error;
 use dss_menu::app::App;
+use dss_menu::fetcher;
 use dss_menu::menu::{Menu, WidgetKind};
 
 const WINDOW_WIDTH: u32 = 1920;
@@ -14,7 +15,8 @@ fn main() -> anyhow::Result<()> {
         .position_centered()
         .build()?;
 
+    let fetcher = fetcher::spawn();
     let (width, height) = window.size();
     let root_widget = WidgetKind::new_root(width, height);
-    App::new(Menu::default(), root_widget).run(context, window)
+    App::new(Menu::new(fetcher), root_widget).run(context, window)
 }

@@ -9,7 +9,10 @@ use sdl2::render::Texture;
 use sdl2::ttf::FontStyle;
 
 use crate::app::{Action, Context, Properties, State, Widget, Widgets};
+use crate::fetcher::Fetcher;
 use crate::schema::{Home, TitleKind};
+
+const HOME_JSON_URL: &str = "https://cd-static.bamgrid.com/dp-117731241344/home.json";
 
 const BACKGROUND_COLOR: Color = Color::RGB(7, 27, 15);
 const RIGHT_MARGIN: i32 = 52;
@@ -28,14 +31,23 @@ const TILE_HEIGHT: u32 = 281;
 const TILE_MARGIN: u32 = 28;
 
 /// Contains the state for the main menu.
-#[derive(Debug, Default)]
-pub struct Menu;
+#[derive(Debug)]
+pub struct Menu {
+    fetcher: Fetcher,
+}
+
+impl Menu {
+    /// Creates a new `Menu` application using the given HTTP fetcher.
+    pub fn new(fetcher: Fetcher) -> Self {
+        Menu { fetcher }
+    }
+}
 
 impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
-        // TODO: Replace local JSON with fetching from remote API.
-        let json = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/home.json"));
-        let home_menu: Home = serde_json::from_str(json)?;
+        let path = self.fetcher.fetch(HOME_JSON_URL.to_owned())?;
+        let json = std::fs::read_to_string(path)?;
+        let home_menu: Home = serde_json::from_str(&json)?;
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
 
         let containers = home_menu
