@@ -21,7 +21,7 @@ pub trait Widget {
     fn properties_mut(&mut self) -> &mut Properties;
 
     /// Renders the widget into the given [`Texture`](sdl2::render::Texture).
-    fn draw(&self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()>;
+    fn draw(&mut self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()>;
 }
 
 /// Contains properties common to all widgets.

@@ -179,7 +179,7 @@ impl Widget for WidgetKind {
         }
     }
 
-    fn draw(&self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()> {
+    fn draw(&mut self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()> {
         match self {
             WidgetKind::Root { properties } => {
                 let Properties { color, .. } = properties;
