@@ -125,14 +125,16 @@ pub struct Container {
 #[serde(tag = "type")]
 pub enum Set {
     /// A curated set of menu items.
+    #[serde(rename = "CuratedSet")]
     #[serde(alias = "PersonalizedCuratedSet")]
-    CuratedSet {
+    Curated {
         items: Vec<Collection>,
         meta: Meta,
         text: Text,
     },
     /// A remote set that must be fetched over the network.
-    SetRef {
+    #[serde(rename = "SetRef")]
+    Ref {
         #[serde(rename = "refId")]
         ref_id: Uuid,
         text: Text,
@@ -143,8 +145,8 @@ impl Set {
     /// Returns the associated text data to be displayed, if any.
     pub fn text(&self) -> &Text {
         match *self {
-            Set::CuratedSet { ref text, .. } => text,
-            Set::SetRef { ref text, .. } => text,
+            Set::Curated { ref text, .. } => text,
+            Set::Ref { ref text, .. } => text,
         }
     }
 }
