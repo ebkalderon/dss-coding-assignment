@@ -219,15 +219,12 @@ impl Widget for WidgetKind {
                     &text,
                 )?;
 
-                let (x, y) = properties.origin;
                 let (width, height) = text.bounds;
+                let rect = Rect::new(0, 0, width, height);
                 ctx.canvas.with_texture_canvas(target, |texture| {
                     texture.set_draw_color(BACKGROUND_COLOR);
-                    texture.draw_rect(Rect::new(x, y, width, height)).unwrap();
                     texture.clear();
-
-                    let dst = Rect::new(0, 0, width, height);
-                    texture.copy(&text.texture, None, dst).unwrap();
+                    texture.copy(&text.texture, None, rect).unwrap();
                 })?;
             }
             WidgetKind::Tile { properties, image } => {
@@ -243,18 +240,15 @@ impl Widget for WidgetKind {
                     })
                     .transpose()?;
 
-                let (x, y) = properties.origin;
                 let (width, height) = properties.bounds;
-                let rect = Rect::new(x, y, width, height);
+                let rect = Rect::new(0, 0, width, height);
 
                 ctx.canvas.with_texture_canvas(target, |texture| {
                     texture.set_draw_color(properties.color);
-                    texture.draw_rect(rect).unwrap();
                     texture.clear();
 
                     if let Some(ref thumbnail) = thumbnail {
-                        let dst = Rect::new(0, 0, width, height);
-                        texture.copy(&thumbnail, None, dst).unwrap();
+                        texture.copy(&thumbnail, None, rect).unwrap();
                     }
                 })?;
             }
