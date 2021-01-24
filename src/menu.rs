@@ -45,7 +45,7 @@ impl Menu {
 
 impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
-        let path = self.fetcher.fetch(HOME_JSON_URL.to_owned())?;
+        let path = self.fetcher.fetch(HOME_JSON_URL.parse().unwrap())?;
         let json = std::fs::read_to_string(path)?;
         let home_menu: Home = serde_json::from_str(&json)?;
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;

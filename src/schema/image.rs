@@ -2,6 +2,7 @@
 
 use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 /// An image tile scaled to fit several aspect ratios.
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,5 +40,5 @@ pub struct ImageContent {
     /// The image resolution is usually scaled down by default. Different image sizes can be
     /// requested by adjusting the query parameters relative to the `master_height` and
     /// `master_width` fields, respectively.
-    pub url: String,
+    pub url: Url,
 }

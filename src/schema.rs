@@ -5,6 +5,7 @@ pub use self::text::{Language, Text, TextContent, TitleKind, Titles};
 
 use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};
+use url::Url;
 use uuid::Uuid;
 
 mod image;
@@ -166,13 +167,13 @@ struct VideoArt {
 /// Contains a list of background video URLs.
 #[derive(Debug, Serialize, Deserialize)]
 struct MediaMetadata {
-    urls: Vec<Url>,
+    urls: Vec<VideoUrl>,
 }
 
 /// A downloadable URL for a video file.
 #[derive(Debug, Serialize, Deserialize)]
-struct Url {
-    url: String,
+struct VideoUrl {
+    url: Url,
 }
 
 #[cfg(test)]

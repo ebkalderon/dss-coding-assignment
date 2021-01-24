@@ -14,18 +14,19 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use reqwest::RequestBuilder;
 use tempfile::TempPath;
+use url::Url;
 
 const MAX_CHANNEL_CAP: usize = 1;
 const MAX_CONCURRENCY: usize = 8;
 
 /// A request sent from `Fetcher` to the background thread asking to download a file from a URL.
-type Request = String;
+type Request = Url;
 
 /// A response sent from the background thread to `Fetcher` containing the current download status.
 type Response = Poll<anyhow::Result<PathBuf>>;
 
 /// An in-memory cache of pending and completed downloads, keyed by their URLs.
-type DownloadCache = RefCell<HashMap<Request, Poll<TempPath>>>;
+type DownloadCache = RefCell<HashMap<Url, Poll<TempPath>>>;
 
 /// Downloads files via HTTP and caches them in the system temporary directory.
 ///
@@ -133,7 +134,7 @@ async fn process_url(url: Request, client: &Client, cache: Rc<DownloadCache>) ->
         },
         // This URL has never been seen before, so enqueue a new download.
         Entry::Vacant(e) => {
-            let request = client.get(e.key());
+            let request = client.get(e.key().as_str());
             let entry = e.insert(Poll::Pending);
 
             match download_file(request).await {
@@ -179,7 +180,7 @@ mod tests {
     fn downloads_file_blocking() {
         let fetcher = spawn();
         let _html_path = fetcher
-            .fetch(EXAMPLE_URL.into())
+            .fetch(EXAMPLE_URL.parse().unwrap())
             .expect("failed to download page");
     }
 
@@ -187,8 +188,9 @@ mod tests {
     async fn downloads_file_concurrently() {
         let fetcher = spawn();
 
+        let url: Url = EXAMPLE_URL.parse().unwrap();
         let jobs: Vec<_> = (0..10)
-            .map(|_| future::poll_fn(|_| fetcher.poll_fetch(EXAMPLE_URL.into())).boxed_local())
+            .map(|_| future::poll_fn(|_| fetcher.poll_fetch(url.clone())).boxed_local())
             .collect();
 
         future::try_join_all(jobs)
