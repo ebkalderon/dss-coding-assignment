@@ -198,6 +198,18 @@ impl Widget for WidgetKind {
         }
     }
 
+    fn update(&mut self) {
+        if let WidgetKind::Tile { image, properties } = self {
+            let prev_state = image.is_ready();
+            let next_state = image.poll_ready().transpose().is_some();
+
+            // Redraw tile widgets if the thumbnail is done downloading.
+            if prev_state != next_state {
+                properties.invalidated = true;
+            }
+        }
+    }
+
     fn draw(&mut self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()> {
         match self {
             WidgetKind::Root { properties } => {
@@ -264,7 +276,7 @@ impl Widget for WidgetKind {
 pub enum Thumbnail {
     /// Represents a downloaded thumbnail that is cached on disk.
     Ready(PathBuf),
-    /// Represents a pending thumbnail that is currently being fetched.
+    /// Represents a thumbnail that is currently being downloaded.
     Pending(Rc<Fetcher>, Url),
 }
 
@@ -288,6 +300,14 @@ impl Thumbnail {
                     self.poll_ready()
                 }
             },
+        }
+    }
+
+    /// Returns `true` if the thumbnail is cached on disk, ready to display.
+    fn is_ready(&self) -> bool {
+        match *self {
+            Thumbnail::Ready(_) => true,
+            _ => false,
         }
     }
 }
