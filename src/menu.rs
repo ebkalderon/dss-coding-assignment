@@ -11,7 +11,7 @@ use url::Url;
 
 use crate::app::{Action, Context, Properties, State, Widget, Widgets};
 use crate::fetcher::Fetcher;
-use crate::schema;
+use crate::schema::{self, Set};
 
 const HOME_JSON_URL: &str = "https://cd-static.bamgrid.com/dp-117731241344/home.json";
 
@@ -27,6 +27,8 @@ const FONT_STYLE: FontStyle = FontStyle::NORMAL;
 const LABEL_PADDING: u32 = 18;
 
 const TILE_COLOR: Color = Color::RGB(23, 126, 127);
+const TILE_IMAGE_NAME: &str = "tile";
+const TILE_ASPECT_RATIO: &str = "1.78";
 const TILE_WIDTH: u32 = 500;
 const TILE_HEIGHT: u32 = 281;
 const TILE_MARGIN: u32 = 28;
@@ -71,16 +73,24 @@ impl State<WidgetKind> for Menu {
                 (id, y, height)
             };
 
-            for j in 0..11 {
-                let _tile_id = widgets
-                    .insert(
-                        WidgetKind::new_tile(
-                            RIGHT_MARGIN + (j * (TILE_WIDTH + TILE_MARGIN)) as i32,
-                            label_y + (label_height + LABEL_PADDING) as i32,
-                        ),
-                        label_id,
-                    )
-                    .unwrap();
+            match &row.set {
+                Set::Curated { items, .. } => {
+                    for (j, tile) in items.iter().enumerate() {
+                        let image_url = get_tile_image_url(&tile)?;
+                        println!("found URL {} for tile {}", image_url, j);
+
+                        let _tile_id = widgets
+                            .insert(
+                                WidgetKind::new_tile(
+                                    RIGHT_MARGIN + (j as u32 * (TILE_WIDTH + TILE_MARGIN)) as i32,
+                                    label_y + (label_height + LABEL_PADDING) as i32,
+                                ),
+                                label_id,
+                            )
+                            .unwrap();
+                    }
+                }
+                Set::Ref { .. } => {} // TODO: Need to implement lazy loading.
             }
         }
 
@@ -252,6 +262,34 @@ fn get_row_title(row: &schema::Container, row_idx: usize) -> anyhow::Result<&str
         .map(|text| text.content.as_str())
 }
 
+fn get_tile_image_url(tile: &schema::Collection) -> anyhow::Result<&Url> {
+    let tile_name = tile
+        .text()
+        .title
+        .get(schema::TitleKind::Full)
+        .map(|text| text.content.as_str())
+        .unwrap_or("unknown");
+
+    tile.images()
+        .get(TILE_IMAGE_NAME)
+        .ok_or_else(|| {
+            anyhow!(
+                "image named {:?} not found for {:?} tile",
+                TILE_IMAGE_NAME,
+                tile_name
+            )
+        })?
+        .get(TILE_ASPECT_RATIO)
+        .map(|image| &image.url)
+        .ok_or_else(|| {
+            anyhow!(
+                "image aspect ratio {:?} not found for {:?} tile",
+                TILE_ASPECT_RATIO,
+                tile_name
+            )
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use schema::Home;
@@ -273,5 +311,22 @@ mod tests {
         let (i, first) = rows.iter().enumerate().next().expect("must not be empty");
         let title = get_row_title(&first, i).expect("failed to retrieve home menu rows");
         assert_eq!(title, "New to Disney+");
+    }
+
+    #[test]
+    fn gets_tile_image_url() {
+        let h: Home = serde_json::from_str(HOME_JSON).expect("failed to deserialize `home.json`");
+        let rows = get_menu_rows(&h).expect("failed to get home menu rows");
+        let first = rows.iter().next().expect("must not be empty");
+
+        let url = match &first.set {
+            Set::Ref { .. } => panic!("expected `CuratedSet`, found `SetRef`"),
+            Set::Curated { items, .. } => get_tile_image_url(&items[0]).expect("image not found"),
+        };
+
+        assert_eq!(
+            url.as_str(),
+            "https://prod-ripcut-delivery.disney-plus.net/v1/variant/disney/3C33485A3043C22B8C89E131693E8B5B9306DAA4E48612A655560752977728A6/scale?format=jpeg&quality=90&scalingAlgorithm=lanczos3&width=500"
+        );
     }
 }
