@@ -145,9 +145,9 @@ impl WidgetKind {
     pub fn new_root(width: u32, height: u32) -> Self {
         WidgetKind::Root {
             properties: Properties {
-                origin: (0, 0),
                 bounds: (width, height),
                 color: BACKGROUND_COLOR,
+                ..Default::default()
             },
         }
     }
@@ -162,7 +162,7 @@ impl WidgetKind {
             properties: Properties {
                 origin: (x, y),
                 bounds: (max_width, approx_height),
-                color: Color::WHITE,
+                ..Default::default()
             },
         }
     }

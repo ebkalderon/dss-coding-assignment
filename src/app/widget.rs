@@ -35,6 +35,16 @@ pub struct Properties {
     pub color: Color,
 }
 
+impl Default for Properties {
+    fn default() -> Self {
+        Properties {
+            origin: (0, 0),
+            bounds: (0, 0),
+            color: Color::WHITE,
+        }
+    }
+}
+
 /// A shared context passed to every [`Widget::draw()`] call.
 pub struct Context<'a, 'tc> {
     /// Handle to the window canvas.
