@@ -17,7 +17,6 @@ use tempfile::TempPath;
 use url::Url;
 
 const MAX_CHANNEL_CAP: usize = 1;
-const MAX_CONCURRENCY: usize = 8;
 
 /// A request sent from `Fetcher` to the background thread asking to download a file from a URL.
 type Request = Url;
@@ -26,7 +25,7 @@ type Request = Url;
 type Response = Poll<anyhow::Result<PathBuf>>;
 
 /// An in-memory cache of pending and completed downloads, keyed by their URLs.
-type DownloadCache = RefCell<HashMap<Url, Poll<TempPath>>>;
+type DownloadCache = RefCell<HashMap<Url, Poll<anyhow::Result<TempPath>>>>;
 
 /// Downloads files via HTTP and caches them in the system temporary directory.
 ///
@@ -106,45 +105,57 @@ pub fn spawn() -> Fetcher {
 /// concurrently on a single thread for maximum throughput.
 #[tokio::main(flavor = "current_thread")]
 async fn fetcher(incoming: Receiver<Request>, outgoing: Sender<Response>, reg: AbortRegistration) {
-    let fetch_files = async move {
-        let client = Client::new();
-        let cache = Rc::new(DownloadCache::default());
+    use tokio::task::{self, LocalSet};
 
-        incoming
-            .into_stream()
-            .for_each_concurrent(MAX_CONCURRENCY, |url| async {
-                let response = process_url(url, &client, cache.clone()).await;
-                outgoing.send_async(response).await.unwrap()
-            })
-            .await;
+    let client = Client::new();
+    let cache = Rc::new(DownloadCache::default());
+    let pool = LocalSet::new();
+
+    let fetch_files = async move {
+        let mut requests = incoming.into_stream();
+
+        while let Some(url) = requests.next().await {
+            task::spawn_local(process(
+                url,
+                client.clone(),
+                cache.clone(),
+                outgoing.clone(),
+            ));
+        }
     };
 
-    Abortable::new(fetch_files, reg).await.ok();
+    let fetcher_task = Abortable::new(fetch_files, reg);
+    pool.run_until(fetcher_task).await.ok();
 }
 
 /// Processes a requested URL, optionally starting a new download and returning the current status.
-async fn process_url(url: Request, client: &Client, cache: Rc<DownloadCache>) -> Response {
+async fn process(url: Request, client: Client, cache: Rc<DownloadCache>, status: Sender<Response>) {
     use std::collections::hash_map::Entry;
 
-    match cache.borrow_mut().entry(url) {
-        // This URL has been requested before, return whether finished or pending.
-        Entry::Occupied(e) => match e.get() {
-            Poll::Ready(temp_path) => Poll::Ready(Ok(temp_path.to_path_buf())),
-            Poll::Pending => Poll::Pending,
-        },
-        // This URL has never been seen before, so enqueue a new download.
-        Entry::Vacant(e) => {
-            let request = client.get(e.key().as_str());
-            let entry = e.insert(Poll::Pending);
+    let mut locked_cache = cache.borrow_mut();
+    match locked_cache.entry(url) {
+        Entry::Occupied(e) => {
+            // This URL has been requested before, so respond either "ready" or "pending".
+            // Remove entry if resulted in error, so download can be restarted on next request.
+            let response = match e.get() {
+                Poll::Ready(Ok(temp_path)) => Poll::Ready(Ok(temp_path.to_path_buf())),
+                Poll::Ready(Err(_)) => e.remove().map(|result| result.map(|_| unreachable!())),
+                Poll::Pending => Poll::Pending,
+            };
 
-            match download_file(request).await {
-                Err(e) => Poll::Ready(Err(e)),
-                Ok(temp_path) => {
-                    let response = Poll::Ready(Ok(temp_path.to_path_buf()));
-                    *entry = Poll::Ready(temp_path);
-                    response
-                }
-            }
+            status.send_async(response).await.unwrap()
+        }
+        Entry::Vacant(e) => {
+            // This URL has never been seen before, so quickly respond "pending" so the main thread
+            // doesn't block, and then spin up the download in the meantime.
+            let url = e.key().clone();
+            let request = client.get(url.as_str());
+            e.insert(Poll::Pending);
+            drop(locked_cache);
+            status.send_async(Poll::Pending).await.unwrap();
+
+            let result = download_file(request).await;
+            *cache.borrow_mut().get_mut(&url).unwrap() = Poll::Ready(result);
         }
     }
 }
