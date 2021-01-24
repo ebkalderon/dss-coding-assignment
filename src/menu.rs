@@ -45,6 +45,7 @@ pub struct Menu {
 
 impl Menu {
     /// Creates a new `Menu` application using the given HTTP fetcher.
+    #[inline]
     pub fn new(f: Fetcher) -> Self {
         let fetcher = Rc::new(f);
         Menu { fetcher }
@@ -304,6 +305,7 @@ impl Thumbnail {
     }
 
     /// Returns `true` if the thumbnail is cached on disk, ready to display.
+    #[inline]
     fn is_ready(&self) -> bool {
         match *self {
             Thumbnail::Ready(_) => true,

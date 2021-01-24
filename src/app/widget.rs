@@ -43,6 +43,7 @@ pub struct Properties {
 }
 
 impl Default for Properties {
+    #[inline]
     fn default() -> Self {
         Properties {
             origin: (0, 0),
@@ -94,6 +95,7 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     }
 
     /// Returns the unique ID of the root widget.
+    #[inline]
     pub fn root(&self) -> WidgetId {
         WidgetId(0)
     }

@@ -51,6 +51,7 @@ pub struct App<W, S> {
 
 impl<W: Widget, S: State<W>> App<W, S> {
     /// Creates a new `App` with the given application [`State`] and root widget.
+    #[inline]
     pub fn new(state: S, root_widget: W) -> Self {
         App { state, root_widget }
     }

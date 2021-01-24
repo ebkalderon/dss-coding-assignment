@@ -51,6 +51,7 @@ impl Fetcher {
     ///
     /// Returns `Err` if the file at the target URL does not exist, an I/O error occurred, or the
     /// background worker thread was terminated.
+    #[inline]
     pub fn fetch(&self, url: Request) -> anyhow::Result<PathBuf> {
         loop {
             match self.poll_fetch(url.clone()) {
@@ -68,6 +69,7 @@ impl Fetcher {
     ///
     /// Returns `Poll::Ready(Err(_))` if the file at the target URL does not exist, an I/O error
     /// occurred, or the background worker thread was terminated.
+    #[inline]
     pub fn poll_fetch(&self, url: Request) -> Response {
         self.request_tx
             .send(url)
