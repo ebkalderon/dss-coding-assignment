@@ -175,6 +175,7 @@ impl WidgetKind {
                 origin: (x, y),
                 bounds: (TILE_WIDTH, TILE_HEIGHT),
                 color: TILE_COLOR,
+                ..Default::default()
             },
         }
     }

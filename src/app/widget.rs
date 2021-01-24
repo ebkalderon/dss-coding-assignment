@@ -33,6 +33,8 @@ pub struct Properties {
     pub bounds: (u32, u32),
     /// Base color of the widget.
     pub color: Color,
+    /// Indicates that the widget should not be rendered.
+    pub hidden: bool,
 }
 
 impl Default for Properties {
@@ -41,6 +43,7 @@ impl Default for Properties {
             origin: (0, 0),
             bounds: (0, 0),
             color: Color::WHITE,
+            hidden: false,
         }
     }
 }
@@ -163,15 +166,18 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
 
         let (x, y) = widget.properties().origin;
         let (width, height) = widget.properties().bounds;
+        let is_hidden = widget.properties().hidden;
 
-        // Retrieve base widget texture, resizing if bounds have changed.
-        let textures = &mut self.textures;
-        let target = texture.create_or_resize(textures.creator, width, height)?;
+        if !is_hidden {
+            // Retrieve base widget texture, resizing if bounds have changed.
+            let textures = &mut self.textures;
+            let target = texture.create_or_resize(textures.creator, width, height)?;
 
-        // Draw the widget to the target texture and copy it to the canvas.
-        widget.draw(&mut Context { canvas, textures }, target)?;
-        let dst = Rect::new(x, y, width, height);
-        canvas.copy(target, None, dst).map_err(Error::msg)?;
+            // Draw the widget to the target texture and copy it to the canvas.
+            widget.draw(&mut Context { canvas, textures }, target)?;
+            let dst = Rect::new(x, y, width, height);
+            canvas.copy(target, None, dst).map_err(Error::msg)?;
+        }
 
         for child_id in self.get_children_of(id).to_vec() {
             if child_id != id {
