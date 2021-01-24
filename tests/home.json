@@ -353,10 +353,10 @@
                                         "1.78": {
                                             "series": {
                                                 "default": {
-                                                    "masterId": "E7BFFF8CD4E7BA85BFB3439CDF90698213E8134E4CC729A9AFA17A2E1FC665D31",
+                                                    "masterId": "E7BFFF8CD4E7BA85BFB3439CDF90698213E8134E4CC729A9AFA17A2E1FC665D3",
                                                     "masterWidth": 3840,
                                                     "masterHeight": 2160,
-                                                    "url": "https://prod-ripcut-delivery.disney-plus.net/v1/variant/disney/E7BFFF8CD4E7BA85BFB3439CDF90698213E8134E4CC729A9AFA17A2E1FC665D31/scale?format=jpeg&quality=90&scalingAlgorithm=lanczos3&width=500"
+                                                    "url": "https://prod-ripcut-delivery.disney-plus.net/v1/variant/disney/E7BFFF8CD4E7BA85BFB3439CDF90698213E8134E4CC729A9AFA17A2E1FC665D3/scale?format=jpeg&quality=90&scalingAlgorithm=lanczos3&width=500"
                                                 }
                                             }
                                         },

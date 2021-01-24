@@ -1,6 +1,10 @@
 //! Business logic for the application.
 
-use anyhow::anyhow;
+use std::path::PathBuf;
+use std::rc::Rc;
+use std::task::Poll;
+
+use anyhow::{anyhow, Context as Context_};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -36,12 +40,13 @@ const TILE_MARGIN: u32 = 28;
 /// Contains the state for the main menu.
 #[derive(Debug)]
 pub struct Menu {
-    fetcher: Fetcher,
+    fetcher: Rc<Fetcher>,
 }
 
 impl Menu {
     /// Creates a new `Menu` application using the given HTTP fetcher.
-    pub fn new(fetcher: Fetcher) -> Self {
+    pub fn new(f: Fetcher) -> Self {
+        let fetcher = Rc::new(f);
         Menu { fetcher }
     }
 }
@@ -77,13 +82,14 @@ impl State<WidgetKind> for Menu {
                 Set::Curated { items, .. } => {
                     for (j, tile) in items.iter().enumerate() {
                         let image_url = get_tile_image_url(&tile)?;
-                        println!("found URL {} for tile {}", image_url, j);
 
                         let _tile_id = widgets
                             .insert(
                                 WidgetKind::new_tile(
                                     RIGHT_MARGIN + (j as u32 * (TILE_WIDTH + TILE_MARGIN)) as i32,
                                     label_y + (label_height + LABEL_PADDING) as i32,
+                                    image_url.clone(),
+                                    self.fetcher.clone(),
                                 ),
                                 label_id,
                             )
@@ -129,6 +135,7 @@ pub enum WidgetKind {
         properties: Properties,
     },
     Tile {
+        image: Thumbnail,
         properties: Properties,
     },
 }
@@ -161,8 +168,9 @@ impl WidgetKind {
     }
 
     /// Creates a new image tile of a fixed size located at the given (X, Y) coordinate.
-    pub fn new_tile(x: i32, y: i32) -> Self {
+    pub fn new_tile(x: i32, y: i32, image_url: Url, fetcher: Rc<Fetcher>) -> Self {
         WidgetKind::Tile {
+            image: Thumbnail::Pending(fetcher, image_url),
             properties: Properties {
                 origin: (x, y),
                 bounds: (TILE_WIDTH, TILE_HEIGHT),
@@ -177,7 +185,7 @@ impl Widget for WidgetKind {
         match self {
             WidgetKind::Root { properties } => properties,
             WidgetKind::Label { properties, .. } => properties,
-            WidgetKind::Tile { properties } => properties,
+            WidgetKind::Tile { properties, .. } => properties,
         }
     }
 
@@ -185,7 +193,7 @@ impl Widget for WidgetKind {
         match self {
             WidgetKind::Root { properties } => properties,
             WidgetKind::Label { properties, .. } => properties,
-            WidgetKind::Tile { properties } => properties,
+            WidgetKind::Tile { properties, .. } => properties,
         }
     }
 
@@ -222,14 +230,32 @@ impl Widget for WidgetKind {
                     texture.copy(&text.texture, None, dst).unwrap();
                 })?;
             }
-            WidgetKind::Tile { properties } => {
+            WidgetKind::Tile { properties, image } => {
+                let textures = &mut ctx.textures;
+                let thumbnail = image
+                    .poll_ready()
+                    .transpose()
+                    .map(|result| {
+                        let path = result?;
+                        textures
+                            .load_image(&path)
+                            .with_context(|| format!("thumbnail {:?} failed to load", path))
+                    })
+                    .transpose()?;
+
                 let (x, y) = properties.origin;
                 let (width, height) = properties.bounds;
                 let rect = Rect::new(x, y, width, height);
+
                 ctx.canvas.with_texture_canvas(target, |texture| {
                     texture.set_draw_color(properties.color);
                     texture.draw_rect(rect).unwrap();
                     texture.clear();
+
+                    if let Some(ref thumbnail) = thumbnail {
+                        let dst = Rect::new(0, 0, width, height);
+                        texture.copy(&thumbnail, None, dst).unwrap();
+                    }
                 })?;
             }
         }
@@ -238,9 +264,45 @@ impl Widget for WidgetKind {
     }
 }
 
-fn download_home_json(url: Url, fetcher: &Fetcher) -> anyhow::Result<schema::Home> {
-    let path = fetcher.fetch(url)?;
-    let json = std::fs::read_to_string(path)?;
+/// A thumbnail image for a [`WidgetKind::Tile`].
+#[derive(Debug)]
+pub enum Thumbnail {
+    /// Represents a downloaded thumbnail that is cached on disk.
+    Ready(PathBuf),
+    /// Represents a pending thumbnail that is currently being fetched.
+    Pending(Rc<Fetcher>, Url),
+}
+
+impl Thumbnail {
+    /// Attempts to return the path to the downloaded image file, if it is ready.
+    ///
+    /// This method does _not_ block if the file is not ready. If the download is still pending,
+    /// the current status can be polled again by repeatedly calling this method. If the file from
+    /// the requested URL already exists on disk, its path will be returned immediately.
+    ///
+    /// Returns `Err(_)` if the file at the target URL does not exist, an I/O error occurred, or
+    /// the background worker thread was terminated.
+    fn poll_ready(&mut self) -> anyhow::Result<Option<&PathBuf>> {
+        match *self {
+            Thumbnail::Ready(ref path) => Ok(Some(path)),
+            Thumbnail::Pending(ref fetcher, ref url) => match fetcher.poll_fetch(url.clone()) {
+                Poll::Pending => Ok(None),
+                Poll::Ready(result) => {
+                    let path = result?;
+                    *self = Thumbnail::Ready(path);
+                    self.poll_ready()
+                }
+            },
+        }
+    }
+}
+
+fn download_home_json(_url: Url, _fetcher: &Fetcher) -> anyhow::Result<schema::Home> {
+    // FIXME: Due to an apparent upstream API bug (reported via email), we will have to stick to
+    // the patched local copy of `home.json` for now.
+    // let path = fetcher.fetch(url)?;
+    // let json = std::fs::read_to_string(path)?;
+    let json = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/home.json"));
     let menu = serde_json::from_str(&json)?;
     Ok(menu)
 }
