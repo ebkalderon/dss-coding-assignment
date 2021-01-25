@@ -213,7 +213,8 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
                 widget.draw(&mut Context { canvas, textures }, target)?;
 
                 // If border is specified, apply the border to the texture.
-                if let Some((border_color, border_width)) = widget.properties().border {
+                let border = widget.properties().border.filter(|b| b.1 > 0);
+                if let Some((border_color, border_width)) = border {
                     canvas.with_texture_canvas(target, |texture| {
                         texture.set_draw_color(border_color);
 
