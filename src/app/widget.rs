@@ -36,6 +36,8 @@ pub struct Properties {
     pub bounds: (u32, u32),
     /// Base color of the widget.
     pub color: Color,
+    /// Border color and thickness, in pixels, if any.
+    pub border: Option<(Color, u8)>,
     /// Indicates that the widget should not be rendered.
     pub hidden: bool,
     /// Indicates whether the [`Widget::draw()`] method needs to be called.
@@ -49,6 +51,7 @@ impl Default for Properties {
             origin: (0, 0),
             bounds: (0, 0),
             color: Color::WHITE,
+            border: None,
             hidden: false,
             invalidated: true,
         }
@@ -205,9 +208,24 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
             let textures = &mut self.textures;
             let target = texture.create_or_resize(textures.creator, width, height)?;
 
-            // Draw the widget to the target texture.
             if is_invalidated {
+                // Draw the widget to the target texture.
                 widget.draw(&mut Context { canvas, textures }, target)?;
+
+                // If border is specified, apply the border to the texture.
+                if let Some((border_color, border_width)) = widget.properties().border {
+                    canvas.with_texture_canvas(target, |texture| {
+                        texture.set_draw_color(border_color);
+
+                        for border_width_count in 0..border_width {
+                            let x = border_width_count as i32;
+                            let y = border_width_count as i32;
+                            let width = width - (border_width_count * 2) as u32;
+                            let height = height - (border_width_count * 2) as u32;
+                            texture.draw_rect(Rect::new(x, y, width, height)).unwrap();
+                        }
+                    })?;
+                }
             }
 
             // Copy the texture to the canvas.

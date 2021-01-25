@@ -36,6 +36,8 @@ const TILE_ASPECT_RATIO: &str = "1.78";
 const TILE_WIDTH: u32 = 500;
 const TILE_HEIGHT: u32 = 281;
 const TILE_MARGIN: u32 = 28;
+const TILE_BORDER_COLOR: Color = Color::WHITE;
+const TILE_BORDER_WIDTH: u8 = 10;
 
 /// Contains the state for the main menu.
 #[derive(Debug)]
@@ -175,6 +177,7 @@ impl WidgetKind {
             properties: Properties {
                 origin: (x, y),
                 bounds: (TILE_WIDTH, TILE_HEIGHT),
+                border: Some((TILE_BORDER_COLOR, TILE_BORDER_WIDTH)),
                 color: TILE_COLOR,
                 ..Default::default()
             },
