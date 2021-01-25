@@ -165,9 +165,7 @@ impl State<WidgetKind> for Menu {
         match *event {
             Event::Quit { .. } => return Action::Quit,
             Event::KeyDown {
-                keycode: Some(key),
-                repeat: false,
-                ..
+                keycode: Some(key), ..
             } => match key {
                 Keycode::Escape => return Action::Quit,
                 Keycode::Up => self.move_up(widgets),
