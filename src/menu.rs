@@ -97,7 +97,7 @@ impl Menu {
     /// Selects an arbitrary tile from the menu grid, given its row/column position.
     fn select_tile(&mut self, row: usize, column: usize, widgets: &mut Widgets<WidgetKind>) {
         let (cur_row, cur_column) = self.selected_tile;
-        let cur_scroll_offset = self.rows[cur_row].1;
+        let (cur_tile_id, cur_scroll_offset) = self.rows[cur_row];
 
         if let Some((anchor_id, scroll_offset)) = self.rows.get(row).copied() {
             let tile_ids = widgets.get_children_of(anchor_id);
@@ -109,10 +109,10 @@ impl Menu {
             let column = (column as isize + cur_scroll_offset - scroll_offset) as usize;
 
             if let Some(tile_id) = tile_ids.get(column) {
-                // Deselect the current tile, returning the delta width and height, in pixels.
+                // Deselect the current tile and scale it down, if necessary.
                 let (delta_width, delta_height) = {
-                    let cur_tile_id = widgets.get_children_of(self.rows[cur_row].0)[cur_column];
-                    let mut tile = widgets.get_mut(cur_tile_id);
+                    let cur_tile_ids = widgets.get_children_of(cur_tile_id)[cur_column];
+                    let mut tile = widgets.get_mut(cur_tile_ids);
 
                     let (width, height) = tile.properties().bounds;
                     let new_width = (width as f32 * (1.0 / CURSOR_SCALE_FACTOR)) as u32;
@@ -121,7 +121,7 @@ impl Menu {
                     let delta_width = width - new_width;
                     let delta_height = height - new_height;
 
-                    // Confirm that this tile is scaled up before shrinking it back down.
+                    // Confirm that this tile is actually scaled up before shrinking it back down.
                     if width != TILE_WIDTH && height != TILE_HEIGHT {
                         tile.properties_mut().bounds = (new_width, new_height);
 
@@ -137,8 +137,8 @@ impl Menu {
                     (delta_width, delta_height)
                 };
 
-                // Select the new tile, returning the new (x, y) coordinates, in pixels.
-                let (new_x, new_y) = {
+                // Select the new tile and scale it up.
+                let (new_tile_x, new_tile_y) = {
                     let mut tile = widgets.get_mut(*tile_id);
 
                     let (width, height) = tile.properties().bounds;
@@ -162,14 +162,14 @@ impl Menu {
                 if cur_row > row {
                     let (_, grid_y) = widgets.get(self.grid_root).properties().origin;
 
-                    let should_scroll_up = new_y + (TILE_HEIGHT as i32) < root_h as i32 / 2;
+                    let should_scroll_up = new_tile_y + (TILE_HEIGHT as i32) < root_h as i32 / 2;
                     let is_not_first_row = grid_y < root_y;
 
                     if should_scroll_up && is_not_first_row {
                         widgets.translate(self.grid_root, 0, ROW_HEIGHT as i32);
                     }
                 } else if cur_row < row {
-                    let should_scroll_down = new_y - TILE_HEIGHT as i32 > (root_h as i32) / 2;
+                    let should_scroll_down = new_tile_y - TILE_HEIGHT as i32 > (root_h as i32) / 2;
 
                     if should_scroll_down {
                         widgets.translate(self.grid_root, 0, -(ROW_HEIGHT as i32));
@@ -180,7 +180,7 @@ impl Menu {
                 if cur_column > column {
                     let (anchor_x, _) = widgets.get(anchor_id).properties().origin;
 
-                    let should_scroll_left = new_x < root_x as i32;
+                    let should_scroll_left = new_tile_x < root_x as i32;
                     let is_not_first_column = anchor_x < root_x;
 
                     if should_scroll_left && is_not_first_column {
@@ -188,7 +188,7 @@ impl Menu {
                         self.rows[cur_row].1 += 1;
                     }
                 } else if cur_column < column {
-                    let should_scroll_right = new_x + TILE_WIDTH as i32 > root_w as i32;
+                    let should_scroll_right = new_tile_x + TILE_WIDTH as i32 > root_w as i32;
 
                     if should_scroll_right {
                         widgets.translate(anchor_id, -(TILE_WIDTH as i32 + TILE_MARGIN as i32), 0);
