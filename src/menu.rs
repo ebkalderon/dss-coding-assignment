@@ -43,7 +43,8 @@ const TILE_BORDER_WIDTH: u8 = 10;
 #[derive(Debug)]
 pub struct Menu {
     fetcher: Rc<Fetcher>,
-    grid: Vec<WidgetId>,
+    rows: Vec<WidgetId>,
+    selected_tile: (usize, usize),
 }
 
 impl Menu {
@@ -52,7 +53,8 @@ impl Menu {
     pub fn new(f: Fetcher) -> Self {
         Menu {
             fetcher: Rc::new(f),
-            grid: Vec::new(),
+            rows: Vec::new(),
+            selected_tile: (0, 0),
         }
     }
 }
@@ -64,7 +66,7 @@ impl State<WidgetKind> for Menu {
         let url = HOME_JSON_URL.parse()?;
         let home_menu = download_home_json(url, &self.fetcher)?;
         let rows = get_menu_rows(&home_menu)?;
-        self.grid.reserve(rows.len());
+        self.rows.reserve(rows.len());
 
         for (i, row) in rows.iter().enumerate() {
             let (label_id, label_y, label_height) = {
@@ -81,7 +83,7 @@ impl State<WidgetKind> for Menu {
                 let (_, y) = label.properties().origin;
                 let (_, height) = label.properties().bounds;
                 let id = widgets.insert(label, widgets.root()).unwrap();
-                self.grid.push(id);
+                self.rows.push(id);
 
                 (id, y, height)
             };
