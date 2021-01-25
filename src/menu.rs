@@ -86,17 +86,14 @@ impl State<WidgetKind> for Menu {
                     for (j, tile) in items.iter().enumerate() {
                         let image_url = get_tile_image_url(&tile)?;
 
-                        let _tile_id = widgets
-                            .insert(
-                                WidgetKind::new_tile(
-                                    RIGHT_MARGIN + (j as u32 * (TILE_WIDTH + TILE_MARGIN)) as i32,
-                                    label_y + (label_height + LABEL_PADDING) as i32,
-                                    image_url.clone(),
-                                    self.fetcher.clone(),
-                                ),
-                                label_id,
-                            )
-                            .unwrap();
+                        let tile = WidgetKind::new_tile(
+                            RIGHT_MARGIN + (j as u32 * (TILE_WIDTH + TILE_MARGIN)) as i32,
+                            label_y + (label_height + LABEL_PADDING) as i32,
+                            image_url.clone(),
+                            self.fetcher.clone(),
+                        );
+
+                        let _tile_id = widgets.insert(tile, label_id).unwrap();
                     }
                 }
                 Set::Ref { .. } => {} // TODO: Need to implement lazy loading.
