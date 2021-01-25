@@ -91,8 +91,8 @@ impl Menu {
 
     /// Selects an arbitrary tile from the menu grid, given its row/column position.
     fn select_tile(&mut self, row: usize, column: usize, widgets: &mut Widgets<WidgetKind>) {
-        if let Some(label_id) = self.rows.get(row) {
-            let tile_ids = widgets.get_children_of(*label_id);
+        if let Some(anchor_id) = self.rows.get(row) {
+            let tile_ids = widgets.get_children_of(*anchor_id);
 
             if let Some(tile_id) = tile_ids.get(column) {
                 let (cur_row, cur_column) = self.selected_tile;
@@ -173,7 +173,7 @@ impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
         self.grid_root = widgets
-            .insert(WidgetKind::new_grid(), widgets.root())
+            .insert(WidgetKind::new_anchor(0, 0), widgets.root())
             .unwrap();
 
         let url = HOME_JSON_URL.parse()?;
@@ -182,7 +182,7 @@ impl State<WidgetKind> for Menu {
         self.rows.reserve(rows.len());
 
         for (i, row) in rows.iter().enumerate() {
-            let (label_id, label_y, label_height) = {
+            let (label_x, label_y, label_height) = {
                 let title = get_row_title(row, i)?;
 
                 let label = WidgetKind::new_label(
@@ -193,13 +193,18 @@ impl State<WidgetKind> for Menu {
                     max_width,
                 );
 
-                let (_, y) = label.properties().origin;
+                let (x, y) = label.properties().origin;
                 let (_, height) = label.properties().bounds;
-                let id = widgets.insert(label, self.grid_root).unwrap();
-                self.rows.push(id);
+                let _label_id = widgets.insert(label, self.grid_root).unwrap();
 
-                (id, y, height)
+                (x, y, height)
             };
+
+            let row_id = widgets
+                .insert(WidgetKind::new_anchor(label_x, label_y), self.grid_root)
+                .unwrap();
+
+            self.rows.push(row_id);
 
             match &row.set {
                 Set::Curated { items, .. } => {
@@ -213,7 +218,7 @@ impl State<WidgetKind> for Menu {
                             self.fetcher.clone(),
                         );
 
-                        let _tile_id = widgets.insert(tile, label_id).unwrap();
+                        let _tile_id = widgets.insert(tile, row_id).unwrap();
                         widgets.get_mut(self.grid_root).properties_mut().bounds.1 += ROW_HEIGHT;
                     }
                 }
@@ -251,7 +256,7 @@ pub enum WidgetKind {
     Root {
         properties: Properties,
     },
-    Grid {
+    Anchor {
         properties: Properties,
     },
     Label {
@@ -277,10 +282,11 @@ impl WidgetKind {
         }
     }
 
-    /// Creates a new invisible anchor point for the rows to attach to.
-    pub fn new_grid() -> Self {
-        WidgetKind::Grid {
+    /// Creates a new invisible anchor point for other widgets to attach to.
+    pub fn new_anchor(x: i32, y: i32) -> Self {
+        WidgetKind::Anchor {
             properties: Properties {
+                origin: (x, y),
                 bounds: (1, 1),
                 hidden: true,
                 ..Default::default()
@@ -321,7 +327,7 @@ impl Widget for WidgetKind {
     fn properties(&self) -> &Properties {
         match self {
             WidgetKind::Root { properties } => properties,
-            WidgetKind::Grid { properties } => properties,
+            WidgetKind::Anchor { properties } => properties,
             WidgetKind::Label { properties, .. } => properties,
             WidgetKind::Tile { properties, .. } => properties,
         }
@@ -330,7 +336,7 @@ impl Widget for WidgetKind {
     fn properties_mut(&mut self) -> &mut Properties {
         match self {
             WidgetKind::Root { properties } => properties,
-            WidgetKind::Grid { properties } => properties,
+            WidgetKind::Anchor { properties } => properties,
             WidgetKind::Label { properties, .. } => properties,
             WidgetKind::Tile { properties, .. } => properties,
         }
@@ -350,7 +356,7 @@ impl Widget for WidgetKind {
 
     fn draw(&mut self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()> {
         match self {
-            WidgetKind::Root { properties } | WidgetKind::Grid { properties } => {
+            WidgetKind::Root { properties } | WidgetKind::Anchor { properties } => {
                 let Properties { color, .. } = properties;
                 ctx.canvas.with_texture_canvas(target, |texture| {
                     texture.set_draw_color(*color);
