@@ -50,6 +50,7 @@ pub struct Menu {
     fetcher: Rc<Fetcher>,
     rows: Vec<WidgetId>,
     selected_tile: (usize, usize),
+    grid_root: WidgetId,
 }
 
 impl Menu {
@@ -60,6 +61,7 @@ impl Menu {
             fetcher: Rc::new(f),
             rows: Vec::new(),
             selected_tile: (0, 0),
+            grid_root: WidgetId::root(),
         }
     }
 
@@ -93,9 +95,10 @@ impl Menu {
             let tile_ids = widgets.get_children_of(*label_id);
 
             if let Some(tile_id) = tile_ids.get(column) {
+                let (cur_row, cur_column) = self.selected_tile;
+
                 // Deselect the current tile, returning the delta width and height, in pixels.
                 let (delta_width, delta_height) = {
-                    let (cur_row, cur_column) = self.selected_tile;
                     let cur_tile_id = widgets.get_children_of(self.rows[cur_row])[cur_column];
                     let mut tile = widgets.get_mut(cur_tile_id);
 
@@ -122,19 +125,43 @@ impl Menu {
                     (delta_width, delta_height)
                 };
 
-                // Select the new tile.
-                let mut tile = widgets.get_mut(*tile_id);
+                // Select the new tile, returning the new (x, y) coordinates, in pixels.
+                let (_new_x, new_y) = {
+                    let mut tile = widgets.get_mut(*tile_id);
 
-                let (width, height) = tile.properties().bounds;
-                tile.properties_mut().bounds = (width + delta_width, height + delta_height);
+                    let (width, height) = tile.properties().bounds;
+                    tile.properties_mut().bounds = (width + delta_width, height + delta_height);
 
-                let (x, y) = tile.properties().origin;
-                let new_x = x - delta_width as i32 / 2;
-                let new_y = y - delta_height as i32 / 2;
-                tile.properties_mut().origin = (new_x, new_y);
+                    let (x, y) = tile.properties().origin;
+                    let new_x = x - delta_width as i32 / 2;
+                    let new_y = y - delta_height as i32 / 2;
+                    tile.properties_mut().origin = (new_x, new_y);
 
-                tile.properties_mut().border = Some((CURSOR_BORDER_COLOR, CURSOR_BORDER_WIDTH));
-                tile.properties_mut().invalidated = true;
+                    tile.properties_mut().border = Some((CURSOR_BORDER_COLOR, CURSOR_BORDER_WIDTH));
+                    tile.properties_mut().invalidated = true;
+
+                    (new_x, new_y)
+                };
+
+                // Scroll the page up and down, if necessary.
+                let (_grid_x, grid_y) = widgets.get(self.grid_root).properties().origin;
+                let (_root_x, root_y) = widgets.get(widgets.root()).properties().origin;
+                let (_root_w, root_h) = widgets.get(widgets.root()).properties().bounds;
+
+                if cur_row > row {
+                    let should_scroll_up = new_y + (TILE_HEIGHT as i32) < root_h as i32 / 2;
+                    let is_not_first_row = grid_y < root_y;
+
+                    if should_scroll_up && is_not_first_row {
+                        widgets.translate(self.grid_root, 0, ROW_HEIGHT as i32);
+                    }
+                } else if cur_row < row {
+                    let should_scroll_down = new_y - TILE_HEIGHT as i32 > (root_h as i32) / 2;
+
+                    if should_scroll_down {
+                        widgets.translate(self.grid_root, 0, -(ROW_HEIGHT as i32));
+                    }
+                }
 
                 self.selected_tile = (row, column);
             }
@@ -145,6 +172,9 @@ impl Menu {
 impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
+        self.grid_root = widgets
+            .insert(WidgetKind::new_grid(), widgets.root())
+            .unwrap();
 
         let url = HOME_JSON_URL.parse()?;
         let home_menu = download_home_json(url, &self.fetcher)?;
@@ -165,7 +195,7 @@ impl State<WidgetKind> for Menu {
 
                 let (_, y) = label.properties().origin;
                 let (_, height) = label.properties().bounds;
-                let id = widgets.insert(label, widgets.root()).unwrap();
+                let id = widgets.insert(label, self.grid_root).unwrap();
                 self.rows.push(id);
 
                 (id, y, height)
@@ -184,6 +214,7 @@ impl State<WidgetKind> for Menu {
                         );
 
                         let _tile_id = widgets.insert(tile, label_id).unwrap();
+                        widgets.get_mut(self.grid_root).properties_mut().bounds.1 += ROW_HEIGHT;
                     }
                 }
                 Set::Ref { .. } => {} // TODO: Need to implement lazy loading.
@@ -220,6 +251,9 @@ pub enum WidgetKind {
     Root {
         properties: Properties,
     },
+    Grid {
+        properties: Properties,
+    },
     Label {
         text: String,
         point_size: u16,
@@ -238,6 +272,17 @@ impl WidgetKind {
             properties: Properties {
                 bounds: (width, height),
                 color: BACKGROUND_COLOR,
+                ..Default::default()
+            },
+        }
+    }
+
+    /// Creates a new invisible anchor point for the rows to attach to.
+    pub fn new_grid() -> Self {
+        WidgetKind::Grid {
+            properties: Properties {
+                bounds: (1, 1),
+                hidden: true,
                 ..Default::default()
             },
         }
@@ -276,6 +321,7 @@ impl Widget for WidgetKind {
     fn properties(&self) -> &Properties {
         match self {
             WidgetKind::Root { properties } => properties,
+            WidgetKind::Grid { properties } => properties,
             WidgetKind::Label { properties, .. } => properties,
             WidgetKind::Tile { properties, .. } => properties,
         }
@@ -284,6 +330,7 @@ impl Widget for WidgetKind {
     fn properties_mut(&mut self) -> &mut Properties {
         match self {
             WidgetKind::Root { properties } => properties,
+            WidgetKind::Grid { properties } => properties,
             WidgetKind::Label { properties, .. } => properties,
             WidgetKind::Tile { properties, .. } => properties,
         }
@@ -303,7 +350,7 @@ impl Widget for WidgetKind {
 
     fn draw(&mut self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()> {
         match self {
-            WidgetKind::Root { properties } => {
+            WidgetKind::Root { properties } | WidgetKind::Grid { properties } => {
                 let Properties { color, .. } = properties;
                 ctx.canvas.with_texture_canvas(target, |texture| {
                     texture.set_draw_color(*color);
