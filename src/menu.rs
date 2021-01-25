@@ -36,8 +36,10 @@ const TILE_ASPECT_RATIO: &str = "1.78";
 const TILE_WIDTH: u32 = 500;
 const TILE_HEIGHT: u32 = 281;
 const TILE_MARGIN: u32 = 28;
-const TILE_BORDER_COLOR: Color = Color::WHITE;
-const TILE_BORDER_WIDTH: u8 = 10;
+
+const CURSOR_BORDER_COLOR: Color = Color::WHITE;
+const CURSOR_BORDER_WIDTH: u8 = 10;
+const CURSOR_SCALE_FACTOR: f32 = 1.1;
 
 /// Contains the state for the main menu.
 #[derive(Debug)]
@@ -88,17 +90,47 @@ impl Menu {
             let tile_ids = widgets.get_children_of(*label_id);
 
             if let Some(tile_id) = tile_ids.get(column) {
-                // Deselect the current tile.
-                let (cur_row, cur_column) = self.selected_tile;
-                let cur_tile_id = widgets.get_children_of(self.rows[cur_row])[cur_column];
-                let mut tile = widgets.get_mut(cur_tile_id);
-                tile.properties_mut().border = None;
-                tile.properties_mut().invalidated = true;
-                drop(tile);
+                // Deselect the current tile, returning the delta width and height, in pixels.
+                let (delta_width, delta_height) = {
+                    let (cur_row, cur_column) = self.selected_tile;
+                    let cur_tile_id = widgets.get_children_of(self.rows[cur_row])[cur_column];
+                    let mut tile = widgets.get_mut(cur_tile_id);
+
+                    let (width, height) = tile.properties().bounds;
+                    let new_width = (width as f32 * (1.0 / CURSOR_SCALE_FACTOR)) as u32;
+                    let new_height = (height as f32 * (1.0 / CURSOR_SCALE_FACTOR)) as u32;
+
+                    let delta_width = width - new_width;
+                    let delta_height = height - new_height;
+
+                    // Confirm that this tile is scaled up before shrinking it back down.
+                    if width != TILE_WIDTH && height != TILE_HEIGHT {
+                        tile.properties_mut().bounds = (new_width, new_height);
+
+                        let (x, y) = tile.properties().origin;
+                        let new_x = x + delta_width as i32 / 2;
+                        let new_y = y + delta_height as i32 / 2;
+                        tile.properties_mut().origin = (new_x, new_y);
+                    }
+
+                    tile.properties_mut().border = None;
+                    tile.properties_mut().invalidated = true;
+
+                    (delta_width, delta_height)
+                };
 
                 // Select the new tile.
                 let mut tile = widgets.get_mut(*tile_id);
-                tile.properties_mut().border = Some((TILE_BORDER_COLOR, TILE_BORDER_WIDTH));
+
+                let (width, height) = tile.properties().bounds;
+                tile.properties_mut().bounds = (width + delta_width, height + delta_height);
+
+                let (x, y) = tile.properties().origin;
+                let new_x = x - delta_width as i32 / 2;
+                let new_y = y - delta_height as i32 / 2;
+                tile.properties_mut().origin = (new_x, new_y);
+
+                tile.properties_mut().border = Some((CURSOR_BORDER_COLOR, CURSOR_BORDER_WIDTH));
                 tile.properties_mut().invalidated = true;
 
                 self.selected_tile = (row, column);
