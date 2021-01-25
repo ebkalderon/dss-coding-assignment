@@ -13,7 +13,7 @@ use sdl2::render::Texture;
 use sdl2::ttf::FontStyle;
 use url::Url;
 
-use crate::app::{Action, Context, Properties, State, Widget, Widgets};
+use crate::app::{Action, Context, Properties, State, Widget, WidgetId, Widgets};
 use crate::fetcher::Fetcher;
 use crate::schema::{self, Set};
 
@@ -43,14 +43,17 @@ const TILE_BORDER_WIDTH: u8 = 10;
 #[derive(Debug)]
 pub struct Menu {
     fetcher: Rc<Fetcher>,
+    grid: Vec<WidgetId>,
 }
 
 impl Menu {
     /// Creates a new `Menu` application using the given HTTP fetcher.
     #[inline]
     pub fn new(f: Fetcher) -> Self {
-        let fetcher = Rc::new(f);
-        Menu { fetcher }
+        Menu {
+            fetcher: Rc::new(f),
+            grid: Vec::new(),
+        }
     }
 }
 
@@ -61,6 +64,7 @@ impl State<WidgetKind> for Menu {
         let url = HOME_JSON_URL.parse()?;
         let home_menu = download_home_json(url, &self.fetcher)?;
         let rows = get_menu_rows(&home_menu)?;
+        self.grid.reserve(rows.len());
 
         for (i, row) in rows.iter().enumerate() {
             let (label_id, label_y, label_height) = {
@@ -77,6 +81,7 @@ impl State<WidgetKind> for Menu {
                 let (_, y) = label.properties().origin;
                 let (_, height) = label.properties().bounds;
                 let id = widgets.insert(label, widgets.root()).unwrap();
+                self.grid.push(id);
 
                 (id, y, height)
             };
