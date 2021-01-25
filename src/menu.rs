@@ -164,14 +164,12 @@ impl State<WidgetKind> for Menu {
     fn handle_event(&mut self, event: &Event, widgets: &mut Widgets<WidgetKind>) -> Action {
         match *event {
             Event::Quit { .. } => return Action::Quit,
-            Event::KeyDown {
-                keycode: Some(key), ..
-            } => match key {
-                Keycode::Escape => return Action::Quit,
-                Keycode::Up => self.move_up(widgets),
-                Keycode::Down => self.move_down(widgets),
-                Keycode::Left => self.move_left(widgets),
-                Keycode::Right => self.move_right(widgets),
+            Event::KeyDown { keycode, .. } => match keycode {
+                Some(Keycode::Escape) => return Action::Quit,
+                Some(Keycode::Up) => self.move_up(widgets),
+                Some(Keycode::Down) => self.move_down(widgets),
+                Some(Keycode::Left) => self.move_left(widgets),
+                Some(Keycode::Right) => self.move_right(widgets),
                 _ => {}
             },
             _ => {}
