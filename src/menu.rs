@@ -57,6 +57,30 @@ impl Menu {
             selected_tile: (0, 0),
         }
     }
+
+    /// Selects an arbitrary tile from the menu grid, given its row/column position.
+    fn select_tile(&mut self, row: usize, column: usize, widgets: &mut Widgets<WidgetKind>) {
+        if let Some(label_id) = self.rows.get(row) {
+            let tile_ids = widgets.get_children_of(*label_id);
+
+            if let Some(tile_id) = tile_ids.get(column) {
+                // Deselect the current tile.
+                let (cur_row, cur_column) = self.selected_tile;
+                let cur_tile_id = widgets.get_children_of(self.rows[cur_row])[cur_column];
+                let mut tile = widgets.get_mut(cur_tile_id);
+                tile.properties_mut().border = None;
+                tile.properties_mut().invalidated = true;
+                drop(tile);
+
+                // Select the new tile.
+                let mut tile = widgets.get_mut(*tile_id);
+                tile.properties_mut().border = Some((TILE_BORDER_COLOR, TILE_BORDER_WIDTH));
+                tile.properties_mut().invalidated = true;
+
+                self.selected_tile = (row, column);
+            }
+        }
+    }
 }
 
 impl State<WidgetKind> for Menu {
@@ -106,6 +130,9 @@ impl State<WidgetKind> for Menu {
                 Set::Ref { .. } => {} // TODO: Need to implement lazy loading.
             }
         }
+
+        let (row, column) = self.selected_tile;
+        self.select_tile(row, column, widgets);
 
         Ok(())
     }
@@ -181,7 +208,6 @@ impl WidgetKind {
             properties: Properties {
                 origin: (x, y),
                 bounds: (TILE_WIDTH, TILE_HEIGHT),
-                border: Some((TILE_BORDER_COLOR, TILE_BORDER_WIDTH)),
                 color: TILE_COLOR,
                 ..Default::default()
             },
