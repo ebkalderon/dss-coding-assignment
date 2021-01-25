@@ -58,6 +58,30 @@ impl Menu {
         }
     }
 
+    /// Scrolls the menu one row up.
+    fn move_up(&mut self, widgets: &mut Widgets<WidgetKind>) {
+        let (row, column) = self.selected_tile;
+        self.select_tile(row.saturating_sub(1), column, widgets);
+    }
+
+    /// Scrolls the menu one row down.
+    fn move_down(&mut self, widgets: &mut Widgets<WidgetKind>) {
+        let (row, column) = self.selected_tile;
+        self.select_tile(row + 1, column, widgets);
+    }
+
+    /// Scrolls the menu one tile to the left.
+    fn move_left(&mut self, widgets: &mut Widgets<WidgetKind>) {
+        let (row, column) = self.selected_tile;
+        self.select_tile(row, column.saturating_sub(1), widgets);
+    }
+
+    /// Scrolls the menu one tile to the right.
+    fn move_right(&mut self, widgets: &mut Widgets<WidgetKind>) {
+        let (row, column) = self.selected_tile;
+        self.select_tile(row, column + 1, widgets);
+    }
+
     /// Selects an arbitrary tile from the menu grid, given its row/column position.
     fn select_tile(&mut self, row: usize, column: usize, widgets: &mut Widgets<WidgetKind>) {
         if let Some(label_id) = self.rows.get(row) {
@@ -137,7 +161,7 @@ impl State<WidgetKind> for Menu {
         Ok(())
     }
 
-    fn handle_event(&mut self, event: &Event, _widgets: &mut Widgets<WidgetKind>) -> Action {
+    fn handle_event(&mut self, event: &Event, widgets: &mut Widgets<WidgetKind>) -> Action {
         match *event {
             Event::Quit { .. } => return Action::Quit,
             Event::KeyDown {
@@ -146,8 +170,10 @@ impl State<WidgetKind> for Menu {
                 ..
             } => match key {
                 Keycode::Escape => return Action::Quit,
-                Keycode::Up | Keycode::Down => println!("Panning {:?}", key),
-                Keycode::Left | Keycode::Right => println!("Sliding {:?}", key),
+                Keycode::Up => self.move_up(widgets),
+                Keycode::Down => self.move_down(widgets),
+                Keycode::Left => self.move_left(widgets),
+                Keycode::Right => self.move_right(widgets),
                 _ => {}
             },
             _ => {}
