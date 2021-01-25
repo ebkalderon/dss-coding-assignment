@@ -28,6 +28,7 @@ const FONT_PATH: &str = concat!(
     "/assets/fonts/Cocogoose-Classic-Medium-trial.ttf"
 );
 const FONT_STYLE: FontStyle = FontStyle::NORMAL;
+const LABEL_POINT_SIZE: u16 = 42;
 const LABEL_PADDING: u32 = 18;
 
 const TILE_COLOR: Color = Color::RGB(23, 126, 127);
@@ -154,7 +155,7 @@ impl State<WidgetKind> for Menu {
 
                 let label = WidgetKind::new_label(
                     title.to_owned(),
-                    42,
+                    LABEL_POINT_SIZE,
                     RIGHT_MARGIN,
                     TOP_MARGIN + (i as u32 * (TILE_HEIGHT + 156)) as i32,
                     max_width,
