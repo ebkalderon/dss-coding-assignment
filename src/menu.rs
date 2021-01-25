@@ -38,6 +38,8 @@ const TILE_WIDTH: u32 = 500;
 const TILE_HEIGHT: u32 = 281;
 const TILE_MARGIN: u32 = 28;
 
+const ROW_HEIGHT: u32 = TILE_HEIGHT + 156;
+
 const CURSOR_BORDER_COLOR: Color = Color::WHITE;
 const CURSOR_BORDER_WIDTH: u8 = 10;
 const CURSOR_SCALE_FACTOR: f32 = 1.1;
@@ -157,7 +159,7 @@ impl State<WidgetKind> for Menu {
                     title.to_owned(),
                     LABEL_POINT_SIZE,
                     RIGHT_MARGIN,
-                    TOP_MARGIN + (i as u32 * (TILE_HEIGHT + 156)) as i32,
+                    TOP_MARGIN + (i as u32 * ROW_HEIGHT) as i32,
                     max_width,
                 );
 
