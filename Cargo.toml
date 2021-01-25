@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-flume = "0.10.1"
+flume = { version = "0.10.1", default-features = false, features = ["async"] }
 fnv = "1.0"
 futures-util = "0.3.12"
 sdl2 = { version = "0.34.3", features = ["image", "ttf"] }
