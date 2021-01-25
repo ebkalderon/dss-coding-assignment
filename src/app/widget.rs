@@ -88,7 +88,7 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
         root_widget.properties_mut().invalidated = true;
 
         let mut cache = HashMap::default();
-        cache.insert(WidgetId(0), CacheEntry::new(root_widget, WidgetId(0)));
+        cache.insert(WidgetId::root(), CacheEntry::new(root_widget, WidgetId(0)));
 
         Widgets {
             cache,
@@ -100,7 +100,7 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     /// Returns the unique ID of the root widget.
     #[inline]
     pub fn root(&self) -> WidgetId {
-        WidgetId(0)
+        WidgetId::root()
     }
 
     /// Inserts a widget into the cache, marked as a child of `parent`.
@@ -252,6 +252,14 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
 /// See the [`Widgets`] documentation for more info.
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct WidgetId(u32);
+
+impl WidgetId {
+    /// Returns the unique ID of the root widget.
+    #[inline]
+    pub fn root() -> Self {
+        WidgetId(0)
+    }
+}
 
 /// A cached widget and its associated metadata.
 #[derive(Debug)]
