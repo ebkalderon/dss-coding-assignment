@@ -44,11 +44,16 @@ const CURSOR_BORDER_COLOR: Color = Color::WHITE;
 const CURSOR_BORDER_WIDTH: u8 = 10;
 const CURSOR_SCALE_FACTOR: f32 = 1.1;
 
+/// A zero or negative integer offset which marks how far to the right a grid row is scrolled.
+///
+/// See the documentation for [`Menu::select_tile()`] for more.
+type ScrollOffset = isize;
+
 /// Contains the state for the main menu.
 #[derive(Debug)]
 pub struct Menu {
     fetcher: Rc<Fetcher>,
-    rows: Vec<WidgetId>,
+    rows: Vec<(WidgetId, ScrollOffset)>,
     selected_tile: (usize, usize),
     grid_root: WidgetId,
 }
@@ -65,25 +70,25 @@ impl Menu {
         }
     }
 
-    /// Scrolls the menu one row up.
+    /// Scrolls the entire menu one row up.
     fn move_up(&mut self, widgets: &mut Widgets<WidgetKind>) {
         let (row, column) = self.selected_tile;
         self.select_tile(row.saturating_sub(1), column, widgets);
     }
 
-    /// Scrolls the menu one row down.
+    /// Scrolls the entire menu one row down.
     fn move_down(&mut self, widgets: &mut Widgets<WidgetKind>) {
         let (row, column) = self.selected_tile;
         self.select_tile(row + 1, column, widgets);
     }
 
-    /// Scrolls the menu one tile to the left.
+    /// Scrolls the current row one tile to the left.
     fn move_left(&mut self, widgets: &mut Widgets<WidgetKind>) {
         let (row, column) = self.selected_tile;
         self.select_tile(row, column.saturating_sub(1), widgets);
     }
 
-    /// Scrolls the menu one tile to the right.
+    /// Scrolls the current row one tile to the right.
     fn move_right(&mut self, widgets: &mut Widgets<WidgetKind>) {
         let (row, column) = self.selected_tile;
         self.select_tile(row, column + 1, widgets);
@@ -91,15 +96,22 @@ impl Menu {
 
     /// Selects an arbitrary tile from the menu grid, given its row/column position.
     fn select_tile(&mut self, row: usize, column: usize, widgets: &mut Widgets<WidgetKind>) {
-        if let Some(anchor_id) = self.rows.get(row) {
-            let tile_ids = widgets.get_children_of(*anchor_id);
+        let (cur_row, cur_column) = self.selected_tile;
+        let cur_scroll_offset = self.rows[cur_row].1;
+
+        if let Some((anchor_id, scroll_offset)) = self.rows.get(row).copied() {
+            let tile_ids = widgets.get_children_of(anchor_id);
+
+            // We want the entire interface to scroll up/down in lockstep, but tiles within the
+            // current row should scroll left/right freely. We use the signed integer offsets from
+            // both `rows[cur_row]` and `rows[row]` to compute the correct array index for the tile
+            // widget we want to select.
+            let column = (column as isize + cur_scroll_offset - scroll_offset) as usize;
 
             if let Some(tile_id) = tile_ids.get(column) {
-                let (cur_row, cur_column) = self.selected_tile;
-
                 // Deselect the current tile, returning the delta width and height, in pixels.
                 let (delta_width, delta_height) = {
-                    let cur_tile_id = widgets.get_children_of(self.rows[cur_row])[cur_column];
+                    let cur_tile_id = widgets.get_children_of(self.rows[cur_row].0)[cur_column];
                     let mut tile = widgets.get_mut(cur_tile_id);
 
                     let (width, height) = tile.properties().bounds;
@@ -126,7 +138,7 @@ impl Menu {
                 };
 
                 // Select the new tile, returning the new (x, y) coordinates, in pixels.
-                let (_new_x, new_y) = {
+                let (new_x, new_y) = {
                     let mut tile = widgets.get_mut(*tile_id);
 
                     let (width, height) = tile.properties().bounds;
@@ -143,12 +155,13 @@ impl Menu {
                     (new_x, new_y)
                 };
 
-                // Scroll the page up and down, if necessary.
-                let (_grid_x, grid_y) = widgets.get(self.grid_root).properties().origin;
-                let (_root_x, root_y) = widgets.get(widgets.root()).properties().origin;
-                let (_root_w, root_h) = widgets.get(widgets.root()).properties().bounds;
+                // Scroll the entire page up and down, if necessary.
+                let (root_x, root_y) = widgets.get(widgets.root()).properties().origin;
+                let (root_w, root_h) = widgets.get(widgets.root()).properties().bounds;
 
                 if cur_row > row {
+                    let (_, grid_y) = widgets.get(self.grid_root).properties().origin;
+
                     let should_scroll_up = new_y + (TILE_HEIGHT as i32) < root_h as i32 / 2;
                     let is_not_first_row = grid_y < root_y;
 
@@ -160,6 +173,26 @@ impl Menu {
 
                     if should_scroll_down {
                         widgets.translate(self.grid_root, 0, -(ROW_HEIGHT as i32));
+                    }
+                }
+
+                // Scroll the current row left and right, if necessary.
+                if cur_column > column {
+                    let (anchor_x, _) = widgets.get(anchor_id).properties().origin;
+
+                    let should_scroll_left = new_x < root_x as i32;
+                    let is_not_first_column = anchor_x < root_x;
+
+                    if should_scroll_left && is_not_first_column {
+                        widgets.translate(anchor_id, TILE_WIDTH as i32 + TILE_MARGIN as i32, 0);
+                        self.rows[cur_row].1 += 1;
+                    }
+                } else if cur_column < column {
+                    let should_scroll_right = new_x + TILE_WIDTH as i32 > root_w as i32;
+
+                    if should_scroll_right {
+                        widgets.translate(anchor_id, -(TILE_WIDTH as i32 + TILE_MARGIN as i32), 0);
+                        self.rows[cur_row].1 -= 1;
                     }
                 }
 
@@ -200,14 +233,15 @@ impl State<WidgetKind> for Menu {
                 (x, y, height)
             };
 
-            let row_id = widgets
-                .insert(WidgetKind::new_anchor(label_x, label_y), self.grid_root)
-                .unwrap();
-
-            self.rows.push(row_id);
-
             match &row.set {
                 Set::Curated { items, .. } => {
+                    let row_id = widgets
+                        .insert(WidgetKind::new_anchor(label_x, label_y), self.grid_root)
+                        .unwrap();
+
+                    let scroll_offset = 0;
+                    self.rows.push((row_id, scroll_offset));
+
                     for (j, tile) in items.iter().enumerate() {
                         let image_url = get_tile_image_url(&tile)?;
 
