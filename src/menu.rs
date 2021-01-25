@@ -101,12 +101,7 @@ impl Menu {
 
         if let Some((anchor_id, scroll_offset)) = self.rows.get(row).copied() {
             let tile_ids = widgets.get_children_of(anchor_id);
-
-            // We want the entire interface to scroll up/down in lockstep, but tiles within the
-            // current row should scroll left/right freely. We use the signed integer offsets from
-            // both `rows[cur_row]` and `rows[row]` to compute the correct array index for the tile
-            // widget we want to select.
-            let column = (column as isize + cur_scroll_offset - scroll_offset) as usize;
+            let column = find_tile_index(column, cur_scroll_offset, scroll_offset);
 
             if let Some(tile_id) = tile_ids.get(column) {
                 // Deselect the current tile and scale it down, if necessary.
@@ -200,6 +195,16 @@ impl Menu {
             }
         }
     }
+}
+
+/// Computes the array index of the menu tile widget we want to select using the scroll offsets.
+///
+/// We want the entire interface to scroll up/down in lockstep, but tiles within the current row
+/// should scroll left/right freely. We use the signed integer offsets from both `rows[cur_row]`
+/// and `rows[row]` to compute the correct array index for the tile widget we want to select.
+#[inline]
+const fn find_tile_index(column: usize, scroll_offset: isize, adj_scroll_offset: isize) -> usize {
+    (column as isize + scroll_offset - adj_scroll_offset) as usize
 }
 
 impl State<WidgetKind> for Menu {
@@ -583,6 +588,17 @@ mod tests {
         assert_eq!(
             url.as_str(),
             "https://prod-ripcut-delivery.disney-plus.net/v1/variant/disney/3C33485A3043C22B8C89E131693E8B5B9306DAA4E48612A655560752977728A6/scale?format=jpeg&quality=90&scalingAlgorithm=lanczos3&width=500"
+        );
+    }
+
+    #[test]
+    fn computes_adjacent_tile_index() {
+        let requested_column = 4;
+        let cur_scroll_offset = -1;
+        let adj_scroll_offset = 1;
+        assert_eq!(
+            find_tile_index(requested_column, cur_scroll_offset, adj_scroll_offset),
+            2
         );
     }
 }
