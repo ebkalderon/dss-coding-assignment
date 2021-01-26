@@ -107,7 +107,7 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 
 * This application will run on an OS with a system allocator available.
 
-* This application will likely be run on a mobile device or smart TV, and as
+* This class of application is optimized for mobile devices or smart TVs, and as
   such should try to eliminate heap allocation and dynamic dispatch where
   possible, and also put the CPU to sleep when applicable to consume less power.
 
