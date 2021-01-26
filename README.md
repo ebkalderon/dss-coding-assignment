@@ -2,6 +2,8 @@
 
 Main menu for a DSS-inspired streaming media application, written in Rust.
 
+![Screenshot](./screenshot.png)
+
 ## Getting started
 
 To build this project on Windows, macOS, or Linux, you will need a recent
