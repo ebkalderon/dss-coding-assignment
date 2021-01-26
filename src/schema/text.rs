@@ -20,7 +20,7 @@ pub enum TitleKind {
     Slug,
 }
 
-/// Contains the text for one or more titles.
+/// A text title, or set of titles, belonging to a menu interface item.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "lowercase")]
 pub struct Titles(HashMap<TitleKind, Kind>);
@@ -46,7 +46,7 @@ enum Kind {
     Set { default: TextContent },
 }
 
-/// Contains the text content and metadata
+/// Contains a text string with some metadata.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextContent {
