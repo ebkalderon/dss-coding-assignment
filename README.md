@@ -101,7 +101,7 @@ can process many async HTTP downloads concurrently without resorting to spawning
 one thread per connection, and sends completed files back to the main thread as
 they become available.
 
-The JSON schema deserializer is located in `src/schema.rs` and its submodules.
+The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 
 ## Assumptions
 
