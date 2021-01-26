@@ -105,23 +105,22 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
 
     /// Inserts a widget into the cache, marked as a child of `parent`.
     ///
-    /// Returns `None` if `parent` does not exist, otherwise returns a `Some` containing the
-    /// [`WidgetId`] of the inserted widget.
-    pub fn insert(&mut self, mut widget: W, parent: WidgetId) -> Option<WidgetId> {
-        let id = WidgetId(self.next_id);
-
-        // Mark the widget for initial drawing.
+    /// Returns the unique ID of the inserted widget.
+    pub fn insert(&mut self, mut widget: W, parent: WidgetId) -> WidgetId {
+        // Mark the widget for initial drawing, just in case.
         widget.properties_mut().invalidated = true;
 
-        if let Some(parent_entry) = self.cache.get_mut(&parent) {
-            parent_entry.children.push(id);
-            self.cache.insert(id, CacheEntry::new(widget, parent));
+        let id = WidgetId(self.next_id);
+        self.cache
+            .get_mut(&parent)
+            .expect("parent always exists")
+            .children
+            .push(id);
 
-            self.next_id += 1;
-            Some(id)
-        } else {
-            None
-        }
+        self.cache.insert(id, CacheEntry::new(widget, parent));
+        self.next_id += 1;
+
+        id
     }
 
     /// Returns an immutable reference to a widget in the cache.

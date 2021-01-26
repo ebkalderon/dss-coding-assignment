@@ -212,9 +212,7 @@ impl State<WidgetKind> for Menu {
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
 
         // This is the invisible anchor point to which the entire menu can be scrolled up/down.
-        self.grid_root = widgets
-            .insert(WidgetKind::new_anchor(0, 0), widgets.root())
-            .unwrap();
+        self.grid_root = widgets.insert(WidgetKind::new_anchor(0, 0), widgets.root());
 
         let url = HOME_JSON_URL.parse()?;
         let home_menu = download_home_json(url, &self.fetcher)?;
@@ -237,7 +235,7 @@ impl State<WidgetKind> for Menu {
                 // `UP` and `DOWN`, but remains stationary when the user scrolls left/right.
                 let (x, y) = label.properties().origin;
                 let (_, height) = label.properties().bounds;
-                let _label_id = widgets.insert(label, self.grid_root).unwrap();
+                let _label_id = widgets.insert(label, self.grid_root);
 
                 (x, y, height)
             };
@@ -246,9 +244,8 @@ impl State<WidgetKind> for Menu {
                 Set::Curated { items, .. } => {
                     // This invisible anchor point is used to scroll the current row of tiles
                     // left/right independently of all the other rows.
-                    let row_id = widgets
-                        .insert(WidgetKind::new_anchor(label_x, label_y), self.grid_root)
-                        .unwrap();
+                    let row_id =
+                        widgets.insert(WidgetKind::new_anchor(label_x, label_y), self.grid_root);
 
                     // Mark that the current row hasn't been scrolled horizontally by the user yet.
                     // This value comes in handy later in `select_tile()`.
@@ -266,7 +263,7 @@ impl State<WidgetKind> for Menu {
                             self.fetcher.clone(),
                         );
 
-                        let _tile_id = widgets.insert(tile, row_id).unwrap();
+                        let _tile_id = widgets.insert(tile, row_id);
                     }
 
                     // Increment the height of `grid_root` so that its dimensions include this row.
