@@ -135,6 +135,9 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 
 * Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
 
+* Skip the SDL hardware-accelerated rendering context and offload even more
+  rendering computations from the CPU to the GPU.
+
 * Cache individually rendered TTF glyphs as SDL textures to make repeated text
   rendering faster, a la [grimfang4/SDL_FontCache].
 
