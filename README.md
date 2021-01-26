@@ -153,6 +153,10 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 
 * Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
 
+* Change `App` to contain a stack of `State`s, rather than just one, and
+  implement a pushdown automaton with switch/push/pop state transitions to
+  create modal interfaces and other screens.
+
 ## Third-party Rust libraries
 
 * `anyhow` is used to eliminate boilerplate from error handling. This commonly
