@@ -25,6 +25,85 @@ pub trait Widget {
 
     /// Renders the widget into the given [`Texture`](sdl2::render::Texture).
     fn draw(&mut self, ctx: &mut Context, target: &mut Texture) -> anyhow::Result<()>;
+
+    /// Returns the top-left (X, Y) coordinate pair denoting the widget's location.
+    #[inline]
+    fn origin(&self) -> (i32, i32) {
+        self.properties().origin
+    }
+
+    /// Returns the width and height of the widget, in pixels.
+    #[inline]
+    fn bounds(&self) -> (u32, u32) {
+        self.properties().bounds
+    }
+
+    /// Returns the base color of the widget.
+    #[inline]
+    fn color(&self) -> Color {
+        self.properties().color
+    }
+
+    /// Returns the widget's border color and thickness, in pixels, if it exists.
+    #[inline]
+    fn border(&self) -> Option<(Color, u8)> {
+        self.properties().border
+    }
+
+    /// Returns whether this widget is hidden.
+    #[inline]
+    fn is_hidden(&self) -> bool {
+        self.properties().hidden
+    }
+
+    /// Moves the widget to pixel coordinate (X, Y).
+    #[inline]
+    fn set_origin(&mut self, x: i32, y: i32) -> &mut Self {
+        self.properties_mut().origin = (x, y);
+        self.invalidate()
+    }
+
+    /// Resizes the widget to the given dimensions, in pixels.
+    #[inline]
+    fn set_bounds(&mut self, width: u32, height: u32) -> &mut Self {
+        self.properties_mut().bounds = (width, height);
+        self.invalidate()
+    }
+
+    /// Sets the color attribute of the widget.
+    #[inline]
+    fn set_color(&mut self, color: Color) -> &mut Self {
+        self.properties_mut().color = color;
+        self.invalidate()
+    }
+
+    /// Applies a border around the widget with the given color and thickness, in pixels.
+    #[inline]
+    fn set_border(&mut self, color: Color, width: u8) -> &mut Self {
+        self.properties_mut().border = Some((color, width));
+        self.invalidate()
+    }
+
+    /// Removes the border drawn around the widget, if it exists.
+    #[inline]
+    fn clear_border(&mut self) -> &mut Self {
+        self.properties_mut().border = None;
+        self.invalidate()
+    }
+
+    /// Toggles the visibility of the widget.
+    #[inline]
+    fn set_hidden(&mut self, hidden: bool) -> &mut Self {
+        self.properties_mut().hidden = hidden;
+        self
+    }
+
+    /// Forces the widget to be redrawn on the next frame.
+    #[inline]
+    fn invalidate(&mut self) -> &mut Self {
+        self.properties_mut().invalidated = true;
+        self
+    }
 }
 
 /// Contains properties common to all widgets.
@@ -85,7 +164,7 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     /// Creates a new [`Widgets`] cache anchored relative to the given `root_widget`.
     pub(crate) fn new(mut root_widget: W, textures: Textures<'tc>) -> Self {
         // Mark the widget for initial drawing.
-        root_widget.properties_mut().invalidated = true;
+        root_widget.invalidate();
 
         let mut cache = HashMap::default();
         cache.insert(WidgetId::root(), CacheEntry::new(root_widget, WidgetId(0)));
@@ -107,8 +186,8 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     ///
     /// Returns the unique ID of the inserted widget.
     pub fn insert(&mut self, mut widget: W, parent: WidgetId) -> WidgetId {
-        // Mark the widget for initial drawing, just in case.
-        widget.properties_mut().invalidated = true;
+        // Mark the widget for initial drawing.
+        widget.invalidate();
 
         let id = WidgetId(self.next_id);
         self.cache
@@ -153,8 +232,8 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
         }
 
         let mut widget = self.get_mut(id);
-        let (x, y) = widget.properties().origin;
-        widget.properties_mut().origin = (x + dx, y + dy);
+        let (x, y) = widget.origin();
+        widget.set_origin(x + dx, y + dy);
 
         for child_id in self.get_children_of(id) {
             if *child_id != id {
@@ -197,20 +276,18 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
             .map(|e| (e.widget.get_mut(), &mut e.texture))
             .unwrap();
 
-        let (x, y) = widget.properties().origin;
-        let (width, height) = widget.properties().bounds;
-        let is_hidden = widget.properties().hidden;
-        let is_invalidated = widget.properties().invalidated;
+        let (x, y) = widget.origin();
+        let (width, height) = widget.bounds();
 
-        if !is_hidden {
+        if !widget.is_hidden() {
             // Retrieve base widget texture, resizing if bounds have changed.
             let textures = &mut self.textures;
             let target = texture.create_or_resize(textures.creator, width, height)?;
 
-            if is_invalidated {
+            if widget.properties().invalidated {
                 widget.draw(&mut Context { canvas, textures }, target)?;
 
-                let border = widget.properties().border.filter(|b| b.1 > 0);
+                let border = widget.border().filter(|b| b.1 > 0);
                 if let Some((border_color, border_width)) = border {
                     canvas.with_texture_canvas(target, |texture| {
                         texture.set_draw_color(border_color);

@@ -109,7 +109,7 @@ impl Menu {
                     let cur_tile_ids = widgets.get_children_of(cur_tile_id)[cur_column];
                     let mut tile = widgets.get_mut(cur_tile_ids);
 
-                    let (width, height) = tile.properties().bounds;
+                    let (width, height) = tile.bounds();
                     let new_width = (width as f32 * (1.0 / CURSOR_SCALE_FACTOR)) as u32;
                     let new_height = (height as f32 * (1.0 / CURSOR_SCALE_FACTOR)) as u32;
 
@@ -118,16 +118,15 @@ impl Menu {
 
                     // Confirm that this tile is actually scaled up before shrinking it back down.
                     if width != TILE_WIDTH && height != TILE_HEIGHT {
-                        tile.properties_mut().bounds = (new_width, new_height);
+                        tile.set_bounds(new_width, new_height);
 
-                        let (x, y) = tile.properties().origin;
+                        let (x, y) = tile.origin();
                         let new_x = x + delta_width as i32 / 2;
                         let new_y = y + delta_height as i32 / 2;
-                        tile.properties_mut().origin = (new_x, new_y);
+                        tile.set_origin(new_x, new_y);
                     }
 
-                    tile.properties_mut().border = None;
-                    tile.properties_mut().invalidated = true;
+                    tile.clear_border();
 
                     (delta_width, delta_height)
                 };
@@ -136,26 +135,25 @@ impl Menu {
                 let (new_tile_x, new_tile_y) = {
                     let mut tile = widgets.get_mut(*tile_id);
 
-                    let (width, height) = tile.properties().bounds;
-                    tile.properties_mut().bounds = (width + delta_width, height + delta_height);
+                    let (width, height) = tile.bounds();
+                    tile.set_bounds(width + delta_width, height + delta_height);
 
-                    let (x, y) = tile.properties().origin;
+                    let (x, y) = tile.origin();
                     let new_x = x - delta_width as i32 / 2;
                     let new_y = y - delta_height as i32 / 2;
-                    tile.properties_mut().origin = (new_x, new_y);
+                    tile.set_origin(new_x, new_y);
 
-                    tile.properties_mut().border = Some((CURSOR_BORDER_COLOR, CURSOR_BORDER_WIDTH));
-                    tile.properties_mut().invalidated = true;
+                    tile.set_border(CURSOR_BORDER_COLOR, CURSOR_BORDER_WIDTH);
 
                     (new_x, new_y)
                 };
 
                 // Scroll the entire page up and down, if necessary.
-                let (root_x, root_y) = widgets.get(widgets.root()).properties().origin;
-                let (root_w, root_h) = widgets.get(widgets.root()).properties().bounds;
+                let (root_x, root_y) = widgets.get(widgets.root()).origin();
+                let (root_w, root_h) = widgets.get(widgets.root()).bounds();
 
                 if cur_row > row {
-                    let (_, grid_y) = widgets.get(self.grid_root).properties().origin;
+                    let (_, grid_y) = widgets.get(self.grid_root).origin();
 
                     let should_scroll_up = new_tile_y + (TILE_HEIGHT as i32) < root_h as i32 / 2;
                     let is_not_first_row = grid_y < root_y;
@@ -173,7 +171,7 @@ impl Menu {
 
                 // Scroll the current row left and right, if necessary.
                 if cur_column > column {
-                    let (anchor_x, _) = widgets.get(anchor_id).properties().origin;
+                    let (anchor_x, _) = widgets.get(anchor_id).origin();
 
                     let should_scroll_left = new_tile_x < root_x as i32;
                     let is_not_first_column = anchor_x < root_x;
@@ -209,7 +207,7 @@ const fn find_tile_index(column: usize, scroll_offset: isize, adj_scroll_offset:
 
 impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
-        let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
+        let (max_width, _) = widgets.get(widgets.root()).bounds();
 
         // This is the invisible anchor point to which the entire menu can be scrolled up/down.
         self.grid_root = widgets.insert(WidgetKind::new_anchor(0, 0), widgets.root());
@@ -233,8 +231,8 @@ impl State<WidgetKind> for Menu {
 
                 // We affix labels to `grid_root` so that it can scroll up/down as the user presses
                 // `UP` and `DOWN`, but remains stationary when the user scrolls left/right.
-                let (x, y) = label.properties().origin;
-                let (_, height) = label.properties().bounds;
+                let (x, y) = label.origin();
+                let (_, height) = label.bounds();
                 let _label_id = widgets.insert(label, self.grid_root);
 
                 (x, y, height)
