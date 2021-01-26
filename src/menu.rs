@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::task::Poll;
 
-use anyhow::{anyhow, Context as Context_};
+use anyhow::anyhow;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -425,16 +425,13 @@ impl Widget for WidgetKind {
             }
             WidgetKind::Tile { properties, image } => {
                 let textures = &mut ctx.textures;
+
+                // If the thumbnail is ready but resulted in error, or if the file could not be
+                // loaded as a texture, just show a blank tile.
                 let thumbnail = image
                     .poll_ready()
                     .transpose()
-                    .map(|result| {
-                        let path = result?;
-                        textures
-                            .load_image(&path)
-                            .with_context(|| format!("thumbnail {:?} failed to load", path))
-                    })
-                    .transpose()?;
+                    .and_then(|result| result.and_then(|path| textures.load_image(&path)).ok());
 
                 let (width, height) = properties.bounds;
                 let rect = Rect::new(0, 0, width, height);
@@ -496,12 +493,9 @@ impl Thumbnail {
     }
 }
 
-fn download_home_json(_url: Url, _fetcher: &Fetcher) -> anyhow::Result<schema::Home> {
-    // FIXME: Due to an apparent upstream API bug (reported via email), we will have to stick to
-    // the patched local copy of `home.json` for now.
-    // let path = fetcher.fetch(url)?;
-    // let json = std::fs::read_to_string(path)?;
-    let json = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/home.json"));
+fn download_home_json(url: Url, fetcher: &Fetcher) -> anyhow::Result<schema::Home> {
+    let path = fetcher.fetch(url)?;
+    let json = std::fs::read_to_string(path)?;
     let menu = serde_json::from_str(&json)?;
     Ok(menu)
 }
