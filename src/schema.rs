@@ -42,6 +42,7 @@ pub struct Collection {
 
 impl Collection {
     /// Returns the kind of collection this is.
+    #[inline]
     pub fn kind(&self) -> CollectionKind {
         match self.inner {
             CollectionInner::DmcSeries { .. } => CollectionKind::DmcSeries,
@@ -53,6 +54,7 @@ impl Collection {
     /// Returns the elements within the collection, if any.
     ///
     /// Returns `Some` if this is a standard collection or `None` otherwise.
+    #[inline]
     pub fn containers(&self) -> Option<&[Container]> {
         match self.inner {
             CollectionInner::StandardCollection { ref containers, .. } => Some(containers),
@@ -63,11 +65,13 @@ impl Collection {
     /// Returns the associated image data to be displayed, if any, keyed by name.
     ///
     /// Standard collections _usually_ do not have images associated with them.
+    #[inline]
     pub fn images(&self) -> &HashMap<String, ImageTile> {
         &self.image
     }
 
     /// Returns the associated text data to be displayed, if any.
+    #[inline]
     pub fn text(&self) -> &Text {
         &self.text
     }
@@ -140,6 +144,7 @@ pub enum Set {
 
 impl Set {
     /// Returns the associated text data to be displayed, if any.
+    #[inline]
     pub fn text(&self) -> &Text {
         match *self {
             Set::Curated { ref text, .. } => text,
