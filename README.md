@@ -133,8 +133,6 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 * Load the video art MP4 files for use as background animations for the
   currently selected tile.
 
-* Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
-
 * Skip the SDL hardware-accelerated rendering context and offload even more
   rendering computations from the CPU to the GPU.
 
@@ -146,10 +144,14 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 
 * Try to reduce heap allocations by using `serde` in zero-copy deserialization
   mode and adding a lifetime to the `home.json` AST (thereby using `&str` over
-  `String` when possible). Perhaps the number of `String` and `Url` copies made
-  during resource fetching/polling could be reduced by sending references
-  instead of values over the channel, but this adds some design complexity to
-  preserve memory invariants.
+  `String` when possible).
+
+* Perhaps the number of `String` and `Url` copies made during file fetching and
+  polling could be reduced by sending references instead of values over the
+  channel, but this would be really tedious to implement due to lifetimes, to
+  say the least.
+
+* Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
 
 ## Third-party Rust libraries
 
