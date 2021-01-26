@@ -36,7 +36,7 @@ brew install sdl2 sdl2_image sdl2_ttf
 
 ```bash
 # Ubuntu/Debian
-sudo apt install -y libsdl2 libsdl2-image libsdl2-ttf
+sudo apt install libsdl2 libsdl2-image libsdl2-ttf
 
 # Arch Linux
 sudo pacman -Sy sdl2 sdl2_image sdl2_ttf
