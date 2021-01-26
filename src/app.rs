@@ -80,8 +80,8 @@ impl<W: Widget, S: State<W>> App<W, S> {
     /// Displays errors in a graphical error message box whenever possible.
     ///
     /// Certain classes of errors, e.g. fatal SDL initialization errors and message box display
-    /// errors, naturally cannot be displayed. The error chain can still be inspected in its
-    /// entirety from the return value of [`App::run()`].
+    /// errors, naturally cannot be displayed in a message box. The resulting error chain can still
+    /// be inspected in its entirety via the return value of [`App::run()`].
     ///
     /// This setting is not enabled by default.
     #[inline]
