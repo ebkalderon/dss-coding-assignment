@@ -126,7 +126,7 @@ The JSON schema deserializer is located in `src/schema.rs` and its submodules.
   `Widget::update()` and using linear interpolation in `Menu::select_tile()` to
   gradually select and deselect tiles.
 
-* Add logging and [Sentry](https://sentry.io/) integration for debugging.
+* Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
 
 * Cache individually rendered TTF glyphs as SDL textures to make repeated text
   rendering faster, a la [grimfang4/SDL_FontCache].
@@ -192,6 +192,7 @@ The JSON schema deserializer is located in `src/schema.rs` and its submodules.
 
 [uses less memory]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
 [grimfang4/SDL_FontCache]: https://github.com/grimfang4/SDL_FontCache
+[Criterion.rs]: https://bheisler.github.io/criterion.rs/book/criterion_rs.html
 
 ## Credits
 
