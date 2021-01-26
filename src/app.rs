@@ -178,8 +178,8 @@ where
     };
 
     window.set_fullscreen(new_state).map_err(Error::msg)?;
-    widgets.get_mut(widgets.root()).properties_mut().bounds = window.size();
-    widgets.get_mut(widgets.root()).properties_mut().invalidated = true;
+    let (width, height) = window.size();
+    widgets.get_mut(widgets.root()).set_bounds(width, height);
 
     Ok(())
 }
