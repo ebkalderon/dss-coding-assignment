@@ -380,10 +380,7 @@ impl<'tc> WidgetTexture<'tc> {
         if self.texture.is_none() || self.width != width || self.height != height {
             self.width = width;
             self.height = height;
-            self.texture = tc
-                .create_texture_target(None, width, height)
-                .map(Some)
-                .map_err(Error::msg)?;
+            self.texture = tc.create_texture_target(None, width, height).map(Some)?;
         }
 
         match self.texture.as_mut() {
@@ -464,8 +461,7 @@ impl<'tc> Textures<'tc> {
         let (max_width, _) = props.bounds;
         let surface = font
             .render(message)
-            .blended_wrapped(props.color, max_width)
-            .map_err(Error::msg)?;
+            .blended_wrapped(props.color, max_width)?;
 
         // NOTE: This is potentially expensive to do every frame. Ideally, we should have some form
         // of caching system which renders and caches glyphs individually for every font, and then
