@@ -3,7 +3,7 @@
 use fnv::FnvHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 
-/// Node containing text data to display.
+/// Node containing text data.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Text {
     /// Contains title text data.
@@ -46,6 +46,7 @@ enum Kind {
     Set { default: TextContent },
 }
 
+/// Contains the text content and metadata
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextContent {
