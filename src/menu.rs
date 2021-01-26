@@ -269,7 +269,7 @@ impl State<WidgetKind> for Menu {
                     // Increment the height of `grid_root` so that its dimensions include this row.
                     widgets.get_mut(self.grid_root).properties_mut().bounds.1 += ROW_HEIGHT;
                 }
-                Set::Ref { .. } => {} // TODO: Need to implement lazy loading.
+                Set::Ref { .. } => {} // TODO: Need to implement lazy ref set loading.
             }
         }
 
