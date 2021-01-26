@@ -1,3 +1,5 @@
+//! Main entry point for the application.
+
 use anyhow::Error;
 use dss_menu::app::App;
 use dss_menu::fetcher;

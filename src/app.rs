@@ -42,7 +42,7 @@ pub trait State<W: Widget> {
     }
 }
 
-/// Entry point for the UI application.
+/// Engine which drives the application state and event loop.
 #[derive(Debug)]
 pub struct App<W, S> {
     state: S,
