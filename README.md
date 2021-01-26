@@ -120,6 +120,9 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 
 ## Possible improvements
 
+* Dynamically populate ref sets as they scroll into view (didn't quite have time
+  to build a widget for that). We are capable of parsing this data, though.
+
 * Draw rectangular cursor of selected menu tile with rounded corners.
 
 * Implement animations by passing the delta time between frames to
@@ -127,6 +130,9 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
   gradually select and deselect tiles.
 
 * Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
+
+* Load the video art MP4 files for use as background animations for the
+  currently selected tile.
 
 * Cache individually rendered TTF glyphs as SDL textures to make repeated text
   rendering faster, a la [grimfang4/SDL_FontCache].
