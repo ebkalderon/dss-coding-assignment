@@ -201,11 +201,7 @@ impl Menu {
 /// should scroll left/right freely. We use the signed integer offsets from both `rows[cur_row]`
 /// and `rows[row]` to compute the correct array index for the tile widget we want to select.
 #[inline]
-const fn compute_tile_index(
-    column: usize,
-    scroll_offset: isize,
-    adj_scroll_offset: isize,
-) -> usize {
+fn compute_tile_index(column: usize, scroll_offset: isize, adj_scroll_offset: isize) -> usize {
     (column as isize + scroll_offset - adj_scroll_offset) as usize
 }
 
