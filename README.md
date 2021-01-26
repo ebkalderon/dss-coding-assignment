@@ -161,9 +161,10 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 
 * `anyhow` is used to eliminate boilerplate from error handling. This commonly
    used crate eliminates the need to create your own error struct or enum for
-   application-type Rust projects (as opposed to library-type projects) and
-   reduces the number of manual implementations of `Debug`, `Display`, `From`,
-   and `std::error::Error` as well as conversions between them.
+   application-type Rust projects (as opposed to library-type projects, where
+   `thiserror` is more popular) and reduces the number of manual implementations
+   of `Debug`, `Display`, `From`, and `std::error::Error` as well as conversions
+   between them.
 
 * `flume` is a MPMC channel library that fixes numerous bugs and deficiencies
   seen in `std::sync::mpsc`, and most notably works with mixed sync/async code.
