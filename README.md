@@ -126,6 +126,11 @@ The JSON schema deserializer is located in `src/schema.rs` and its submodules.
   `Widget::update()` and using linear interpolation in `Menu::select_tile()` to
   gradually select and deselect tiles.
 
+* Add logging and [Sentry](https://sentry.io/) integration for debugging.
+
+* Cache individually rendered TTF glyphs as SDL textures to make repeated text
+  rendering faster, a la [grimfang4/SDL_FontCache].
+
 * Find (or write) an alternative async executor which allows for explicit
   handling of out-of-memory errors.
 
@@ -135,8 +140,6 @@ The JSON schema deserializer is located in `src/schema.rs` and its submodules.
   during resource fetching/polling could be reduced by sending references
   instead of values over the channel, but this adds some design complexity to
   preserve memory invariants.
-
-* Add logging and [Sentry](https://sentry.io/) integration for debugging.
 
 ## Third-party Rust libraries
 
@@ -172,8 +175,6 @@ The JSON schema deserializer is located in `src/schema.rs` and its submodules.
   which is nice because it eliminates one more runtime dependency and
   [uses less memory].
 
-[uses less memory]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
-
 * `tempfile` is used for locating the OS temporary directory and creating
   temporary files that delete themselves after dropping, a facility not provided
   by the Rust standard library.
@@ -188,6 +189,9 @@ The JSON schema deserializer is located in `src/schema.rs` and its submodules.
   time and for use with `reqwest`.
 
 * `uuid` is used only for type-safety while deserializing UUIDs from JSON.
+
+[uses less memory]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
+[grimfang4/SDL_FontCache]: https://github.com/grimfang4/SDL_FontCache
 
 ## Credits
 
