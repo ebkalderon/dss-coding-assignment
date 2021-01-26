@@ -210,6 +210,8 @@ const fn find_tile_index(column: usize, scroll_offset: isize, adj_scroll_offset:
 impl State<WidgetKind> for Menu {
     fn initialize(&mut self, widgets: &mut Widgets<WidgetKind>) -> anyhow::Result<()> {
         let (max_width, _) = widgets.get(widgets.root()).properties().bounds;
+
+        // This is the invisible anchor point to which the entire menu can be scrolled up/down.
         self.grid_root = widgets
             .insert(WidgetKind::new_anchor(0, 0), widgets.root())
             .unwrap();
@@ -231,6 +233,8 @@ impl State<WidgetKind> for Menu {
                     max_width,
                 );
 
+                // We affix labels to `grid_root` so that it can scroll up/down as the user presses
+                // `UP` and `DOWN`, but remains stationary when the user scrolls left/right.
                 let (x, y) = label.properties().origin;
                 let (_, height) = label.properties().bounds;
                 let _label_id = widgets.insert(label, self.grid_root).unwrap();
@@ -240,13 +244,18 @@ impl State<WidgetKind> for Menu {
 
             match &row.set {
                 Set::Curated { items, .. } => {
+                    // This invisible anchor point is used to scroll the current row of tiles
+                    // left/right independently of all the other rows.
                     let row_id = widgets
                         .insert(WidgetKind::new_anchor(label_x, label_y), self.grid_root)
                         .unwrap();
 
+                    // Mark that the current row hasn't been scrolled horizontally by the user yet.
+                    // This value comes in handy later in `select_tile()`.
                     let scroll_offset = 0;
                     self.rows.push((row_id, scroll_offset));
 
+                    // Create a row of tiles whose thumbnails are loaded in asynchronously.
                     for (j, tile) in items.iter().enumerate() {
                         let image_url = get_tile_image_url(&tile)?;
 
@@ -258,13 +267,16 @@ impl State<WidgetKind> for Menu {
                         );
 
                         let _tile_id = widgets.insert(tile, row_id).unwrap();
-                        widgets.get_mut(self.grid_root).properties_mut().bounds.1 += ROW_HEIGHT;
                     }
+
+                    // Increment the height of `grid_root` so that its dimensions include this row.
+                    widgets.get_mut(self.grid_root).properties_mut().bounds.1 += ROW_HEIGHT;
                 }
                 Set::Ref { .. } => {} // TODO: Need to implement lazy loading.
             }
         }
 
+        // The menu grid is populated, so select the current tile.
         let (row, column) = self.selected_tile;
         self.select_tile(row, column, widgets);
 
