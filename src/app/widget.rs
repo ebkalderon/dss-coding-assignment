@@ -243,14 +243,14 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     }
 
     /// Ticks the internal state of all widgets by one frame.
-    pub fn update(&mut self) {
+    pub(crate) fn update(&mut self) {
         for widget in self.cache.values_mut().map(|e| e.widget.get_mut()) {
             widget.update();
         }
     }
 
     /// Returns whether any widgets have indicated that they need to be redrawn.
-    pub fn is_invalidated(&self) -> bool {
+    pub(crate) fn is_invalidated(&self) -> bool {
         self.cache
             .values()
             .any(|e| e.widget.borrow().properties().invalidated)
@@ -259,7 +259,7 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
     /// Renders all the widgets in the cache to the canvas.
     ///
     /// This method should only redraw widgets that requested it, for the sake of efficiency.
-    pub fn draw(&mut self, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
+    pub(crate) fn draw(&mut self, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
         canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
         canvas.clear();
 
