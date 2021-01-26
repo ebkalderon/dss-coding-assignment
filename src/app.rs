@@ -18,8 +18,21 @@ mod widget;
 pub enum Action {
     /// Continue to run the application.
     Continue,
+    /// Adjust the window fullscreen state.
+    Fullscreen(Fullscreen),
     /// Shut down the application.
     Quit,
+}
+
+/// A list of window fullscreen state transitions.
+#[derive(Clone, Copy, Debug)]
+pub enum Fullscreen {
+    /// Switch to fullscreen mode.
+    On,
+    /// Restore to windowed mode.
+    Off,
+    /// Toggle between fullscreen and windowed mode.
+    Toggle,
 }
 
 /// A trait implemented by the main application state.
@@ -79,6 +92,7 @@ impl<W: Widget, S: State<W>> App<W, S> {
             for event in events.poll_iter() {
                 match self.state.handle_event(&event, &mut widgets) {
                     Action::Continue => {}
+                    Action::Fullscreen(f) => fullscreen(f, canvas.window_mut(), &mut widgets)?,
                     Action::Quit => break 'running,
                 }
             }
@@ -102,4 +116,35 @@ impl<W: Widget, S: State<W>> App<W, S> {
 
         Ok(())
     }
+}
+
+/// Sets the `window` fullscreen state and scales the root widget bounds to match the new size.
+///
+/// When fullscreen mode is enabled or toggled on, this function always prefers native fullscreen
+/// over borderless desktop fullscreen, unless the SDL window was explicitly initialized with
+/// desktop fullscreen.
+fn fullscreen<W>(f: Fullscreen, window: &mut Window, widgets: &mut Widgets<W>) -> anyhow::Result<()>
+where
+    W: Widget,
+{
+    use sdl2::video::FullscreenType;
+
+    let current = window.fullscreen_state();
+    let new_state = match f {
+        Fullscreen::On if current == FullscreenType::Desktop => FullscreenType::Desktop,
+        Fullscreen::On => FullscreenType::True,
+        Fullscreen::Off => FullscreenType::Off,
+        Fullscreen::Toggle => match current {
+            FullscreenType::True => FullscreenType::Off,
+            FullscreenType::Desktop => FullscreenType::Off,
+            FullscreenType::Off if current == FullscreenType::Desktop => FullscreenType::Desktop,
+            FullscreenType::Off => FullscreenType::True,
+        },
+    };
+
+    window.set_fullscreen(new_state).map_err(Error::msg)?;
+    widgets.get_mut(widgets.root()).properties_mut().bounds = window.size();
+    widgets.get_mut(widgets.root()).properties_mut().invalidated = true;
+
+    Ok(())
 }

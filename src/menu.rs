@@ -13,7 +13,7 @@ use sdl2::render::Texture;
 use sdl2::ttf::FontStyle;
 use url::Url;
 
-use crate::app::{Action, Context, Properties, State, Widget, WidgetId, Widgets};
+use crate::app::{Action, Context, Fullscreen, Properties, State, Widget, WidgetId, Widgets};
 use crate::fetcher::Fetcher;
 use crate::schema::{self, Set};
 
@@ -275,11 +275,12 @@ impl State<WidgetKind> for Menu {
         match *event {
             Event::Quit { .. } => return Action::Quit,
             Event::KeyDown { keycode, .. } => match keycode {
-                Some(Keycode::Escape) => return Action::Quit,
                 Some(Keycode::Up) => self.move_up(widgets),
                 Some(Keycode::Down) => self.move_down(widgets),
                 Some(Keycode::Left) => self.move_left(widgets),
                 Some(Keycode::Right) => self.move_right(widgets),
+                Some(Keycode::Escape) => return Action::Quit,
+                Some(Keycode::F11) => return Action::Fullscreen(Fullscreen::Toggle),
                 _ => {}
             },
             _ => {}

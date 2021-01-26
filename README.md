@@ -75,10 +75,11 @@ cargo doc --open
 
 The input controls for navigating the UI are listed below:
 
-Action        | Controls
---------------|------------------------------------------------------------------
-Navigate menu | <kbd>↑</kbd>, <kbd>↓</kbd>, <kbd>←</kbd>, <kbd>→</kbd>
-Close window  | <kbd>Esc</kbd> or "close" button
+Action            | Controls
+------------------|-------------------------------------------------------------
+Navigate menu     | <kbd>↑</kbd>, <kbd>↓</kbd>, <kbd>←</kbd>, <kbd>→</kbd>
+Toggle fullscreen | <kbd>F11</kbd>
+Close window      | <kbd>Esc</kbd> or "close" button
 
 ## Credits
 
