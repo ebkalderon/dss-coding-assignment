@@ -82,6 +82,7 @@ Close window  | <kbd>Esc</kbd> or "close" button
 
 ## Credits
 
-Includes the [Cocogoose Pro Font Family], which is free for personal use.
+Includes the [Cocogoose Pro] TrueType font family, which is free for personal
+use.
 
 [Cocogoose Pro]: https://www.1001fonts.com/cocogoose-pro-font.html
