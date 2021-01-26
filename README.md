@@ -1,38 +1,46 @@
 # Disney Streaming Services (DSS) Main Menu
 
+Main menu for a DSS-inspired streaming media application, written in Rust.
+
 ## Getting started
 
-### Prerequisites
+To build this project on Windows, macOS, or Linux, you will need a recent
+version of the [Rust toolchain](https://www.rust-lang.org/) at least version
+1.46.0, at minimum, but versions 1.48.0 and newer are strongly recommended
+because they perform better with async code ([rust-lang/rust#78410]).
 
-To build this project on Windows, macOS, or Linux, you will need a recent stable
-version of the [Rust toolchain](https://www.rust-lang.org/) (this project was
-tested with 1.49.0).
+[rust-lang/rust#78410]: https://github.com/rust-lang/rust/pull/78410
 
 If [`rustup`](https://rustup.rs/) is available on your system, the included 
 [`rust-toolchain`](./rust-toolchain) file at the root directory of this
-repository should automatically fetch and install Rust 1.49.0 for you, if it's
+repository should automatically fetch and install the Rust toolchain for you, if
 not already present on your system, as soon as you execute any `cargo` command
 in the shell.
 
 The following external dependencies will also be required on your system:
 
-* [SDL2](https://www.libsdl.org/)
-* `SDL2_Image`
-* `SDL2_TTF`
+* [SDL2], for system window and render context management, input handling, and
+  hardware-accelerated rendering.
+* [SDL2_image], for loading arbitrary image files as SDL textures.
+* [SDL2_ttf], for loading and rendering TrueType fonts as SDL textures.
 
-#### Windows (MSVC with vcpkg)
+[SDL2]: https://www.libsdl.org/
+[SDL2_image]: https://www.libsdl.org/projects/SDL_image/
+[SDL2_ttf]: https://www.libsdl.org/projects/SDL_ttf/
+
+### Windows (MSVC with vcpkg)
 
 ```bat
 vcpkg.exe install sdl2:x64-windows sdl2-image:x64-windows sdl2-ttf:x64-windows
 ```
 
-#### macOS
+### macOS
 
 ```bash
 brew install sdl2 sdl2_image sdl2_ttf
 ```
 
-#### Linux
+### Linux
 
 ```bash
 # Ubuntu/Debian
@@ -42,7 +50,7 @@ sudo apt install libsdl2 libsdl2-image libsdl2-ttf
 sudo pacman -Sy sdl2 sdl2_image sdl2_ttf
 ```
 
-### Compiling
+## Compiling
 
 To compile the application in release mode and start it, simply run this command
 in your terminal:
