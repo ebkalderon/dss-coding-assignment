@@ -101,7 +101,7 @@ impl Menu {
 
         if let Some((anchor_id, scroll_offset)) = self.rows.get(row).copied() {
             let tile_ids = widgets.get_children_of(anchor_id);
-            let column = find_tile_index(column, cur_scroll_offset, scroll_offset);
+            let column = compute_tile_index(column, cur_scroll_offset, scroll_offset);
 
             if let Some(tile_id) = tile_ids.get(column) {
                 // Deselect the current tile and scale it down, if necessary.
@@ -201,7 +201,11 @@ impl Menu {
 /// should scroll left/right freely. We use the signed integer offsets from both `rows[cur_row]`
 /// and `rows[row]` to compute the correct array index for the tile widget we want to select.
 #[inline]
-const fn find_tile_index(column: usize, scroll_offset: isize, adj_scroll_offset: isize) -> usize {
+const fn compute_tile_index(
+    column: usize,
+    scroll_offset: isize,
+    adj_scroll_offset: isize,
+) -> usize {
     (column as isize + scroll_offset - adj_scroll_offset) as usize
 }
 
@@ -599,7 +603,7 @@ mod tests {
         let cur_scroll_offset = -1;
         let adj_scroll_offset = 1;
         assert_eq!(
-            find_tile_index(requested_column, cur_scroll_offset, adj_scroll_offset),
+            compute_tile_index(requested_column, cur_scroll_offset, adj_scroll_offset),
             2
         );
     }
