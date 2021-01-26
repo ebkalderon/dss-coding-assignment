@@ -165,7 +165,7 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
   protection for local rendering uses, though, and `fnv` performs _way_ better
   during hot loops where map accesses and inserts are frequent.
 
-* `futures_util` contains common async traits not yet available in the Rust
+* `futures-util` contains common async traits not yet available in the Rust
   standard library (e.g. `FutureExt`, `StreamExt`, and so on) as well as the
   `Abortable` combinator and `poll_fn()` function used in tests.
 
