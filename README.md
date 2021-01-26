@@ -121,7 +121,8 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
 ## Possible improvements
 
 * Dynamically populate ref sets as they scroll into view (didn't quite have time
-  to build a widget for that). We are capable of parsing this data, though.
+  to build a widget or callback for that). We are capable of parsing this data,
+  though, since the schema types exist.
 
 * Draw rectangular cursor of selected menu tile with rounded corners.
 
