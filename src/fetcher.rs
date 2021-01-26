@@ -27,7 +27,7 @@ type Response = Poll<anyhow::Result<PathBuf>>;
 /// An in-memory cache of pending and completed downloads, keyed by their URLs.
 type DownloadCache = RefCell<HashMap<Url, Poll<anyhow::Result<TempPath>>>>;
 
-/// Downloads files via HTTP and caches them in the system temporary directory.
+/// Downloads files via HTTP and caches them in the OS temporary directory.
 ///
 /// This utilizes a dedicated OS thread to prevent potentially blocking the main thread with I/O.
 /// Individual download requests are processed concurrently on this thread for maximum throughput.
