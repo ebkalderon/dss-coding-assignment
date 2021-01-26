@@ -129,10 +129,10 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
   `Widget::update()` and using linear interpolation in `Menu::select_tile()` to
   gradually select and deselect tiles.
 
-* Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
-
 * Load the video art MP4 files for use as background animations for the
   currently selected tile.
+
+* Add text logging and/or profiling with [Criterion.rs] and `cargo bench`.
 
 * Cache individually rendered TTF glyphs as SDL textures to make repeated text
   rendering faster, a la [grimfang4/SDL_FontCache].
