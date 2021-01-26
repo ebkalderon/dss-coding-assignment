@@ -178,14 +178,14 @@ impl Menu {
 
                     if should_scroll_left && is_not_first_column {
                         widgets.translate(anchor_id, TILE_WIDTH as i32 + TILE_MARGIN as i32, 0);
-                        self.rows[cur_row].1 += 1;
+                        self.rows[cur_row].1 += (cur_column - column) as isize;
                     }
                 } else if cur_column < column {
                     let should_scroll_right = new_tile_x + TILE_WIDTH as i32 > root_w as i32;
 
                     if should_scroll_right {
                         widgets.translate(anchor_id, -(TILE_WIDTH as i32 + TILE_MARGIN as i32), 0);
-                        self.rows[cur_row].1 -= 1;
+                        self.rows[cur_row].1 -= (column - cur_column) as isize;
                     }
                 }
 
