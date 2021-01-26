@@ -134,7 +134,7 @@ The JSON schema `serde` types are located in `src/schema.rs` and its submodules.
   currently selected tile.
 
 * Skip the SDL hardware-accelerated rendering context and offload even more
-  rendering computations from the CPU to the GPU.
+  manual rendering computations from the CPU to the GPU.
 
 * Cache individually rendered TTF glyphs as SDL textures to make repeated text
   rendering faster, a la [grimfang4/SDL_FontCache].
