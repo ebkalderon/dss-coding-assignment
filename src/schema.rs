@@ -89,10 +89,7 @@ pub enum CollectionKind {
 #[serde(tag = "type")]
 enum CollectionInner {
     #[serde(rename_all = "camelCase")]
-    DmcSeries {
-        series_id: Uuid,
-        encoded_series_id: String,
-    },
+    DmcSeries { series_id: Uuid },
     #[serde(rename_all = "camelCase")]
     DmcVideo { program_type: ProgramType },
     #[serde(rename_all = "camelCase")]
