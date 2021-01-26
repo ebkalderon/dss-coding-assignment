@@ -148,7 +148,7 @@ async fn process(url: Request, client: Client, cache: Rc<DownloadCache>, status:
             status.send_async(response).await.unwrap()
         }
         Entry::Vacant(e) => {
-            // This URL has never been seen before, so quickly respond "pending" so the main thread
+            // This URL has never been seen before, so quickly respond "pending" so the UI thread
             // doesn't block, and then spin up the download in the meantime.
             let url = e.key().clone();
             let request = client.get(url.as_str());
