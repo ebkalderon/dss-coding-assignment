@@ -63,6 +63,13 @@ To generate HTML documentation for the public crate API, run:
 cargo doc --open
 ```
 
+## Usage
+
+Action        | Controls
+--------------|------------------------------------------------------------------
+Navigate menu | <kbd>Up</kbd>, <kbd>Down</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd>
+Close window  | <kbd>Esc</kbd> or "close" button
+
 ## Credits
 
 Includes the [Cocogoose Pro Font Family], which is free for personal use.
