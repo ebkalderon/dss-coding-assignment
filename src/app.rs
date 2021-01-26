@@ -6,10 +6,13 @@ use std::time::{Duration, Instant};
 
 use anyhow::Error;
 use sdl2::event::Event;
+use sdl2::messagebox::{show_simple_message_box, MessageBoxFlag};
+use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::Sdl;
 
 const TARGET_FRAME_RATE: u16 = 60;
+const MESSAGE_BOX_KIND: MessageBoxFlag = MessageBoxFlag::ERROR;
 
 mod widget;
 
@@ -60,13 +63,31 @@ pub trait State<W: Widget> {
 pub struct App<W, S> {
     state: S,
     root_widget: W,
+    error_message_box: Option<&'static str>,
 }
 
 impl<W: Widget, S: State<W>> App<W, S> {
     /// Creates a new `App` with the given application [`State`] and root widget.
     #[inline]
     pub fn new(state: S, root_widget: W) -> Self {
-        App { state, root_widget }
+        App {
+            state,
+            root_widget,
+            error_message_box: None,
+        }
+    }
+
+    /// Displays errors in a graphical error message box whenever possible.
+    ///
+    /// Certain classes of errors, e.g. fatal SDL initialization errors and message box display
+    /// errors, naturally cannot be displayed. The error chain can still be inspected in its
+    /// entirety from the return value of [`App::run()`].
+    ///
+    /// This setting is not enabled by default.
+    #[inline]
+    pub fn with_error_message_box(mut self, window_title: &'static str) -> Self {
+        self.error_message_box = Some(window_title);
+        self
     }
 
     /// Executes the main loop with the given [`Sdl`](sdl2::Sdl) context and
@@ -74,9 +95,23 @@ impl<W: Widget, S: State<W>> App<W, S> {
     ///
     /// Returns `Ok` when the application has exited successfully, or returns `Err` if the
     /// application failed to initialize or an SDL error was encountered.
-    pub fn run(mut self, sdl: Sdl, window: Window) -> anyhow::Result<()> {
-        let mut events = sdl.event_pump().map_err(Error::msg)?;
+    #[inline]
+    pub fn run(self, sdl: Sdl, window: Window) -> anyhow::Result<()> {
         let mut canvas = window.into_canvas().accelerated().present_vsync().build()?;
+
+        let error_message_box = self.error_message_box;
+        let result = self.main_loop(sdl, &mut canvas);
+
+        if let Some((window_title, error)) = error_message_box.zip(result.as_ref().err()) {
+            let message = format!("{:?}", error);
+            show_simple_message_box(MESSAGE_BOX_KIND, window_title, &message, canvas.window())?;
+        }
+
+        result
+    }
+
+    fn main_loop(mut self, sdl: Sdl, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
+        let mut events = sdl.event_pump().map_err(Error::msg)?;
 
         let texture_creator = canvas.texture_creator();
         let textures = Textures::new(&texture_creator)?;
@@ -102,7 +137,7 @@ impl<W: Widget, S: State<W>> App<W, S> {
 
             // Draw the next frame onto the canvas.
             if widgets.is_invalidated() {
-                widgets.draw(&mut canvas)?;
+                widgets.draw(canvas)?;
             }
 
             let frame_time = start.elapsed();
