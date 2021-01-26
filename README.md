@@ -83,6 +83,112 @@ Navigate menu     | <kbd>↑</kbd>, <kbd>↓</kbd>, <kbd>←</kbd>, <kbd>→</kb
 Toggle fullscreen | <kbd>F11</kbd>
 Close window      | <kbd>Esc</kbd> or "close" button
 
+## Project layout
+
+Like many idiomatic Rust projects, this service is split into a binary crate
+(the `main.rs` file) and a library crate (`lib.rs` and the rest). This is to
+facilitate simpler unit and integration testing under Cargo, should we require
+more of it in the future.
+
+The `main.rs` is a very thin shim over `dss_menu::app::App`, which manages the
+main loop, UI rendering, and drives the `dss_menu::menu::Menu` business logic
+forward.
+
+There is also a single background I/O thread for fetching arbitrary files over
+HTTP and caching them in the system temp directory, which is spawned on app
+startup; the implementation for this is located in `src/fetcher.rs`. This thread
+can process many async HTTP downloads concurrently without resorting to spawning
+one thread per connection, and sends completed files back to the main thread as
+they become available.
+
+The JSON schema deserializer is located in `src/schema.rs` and its submodules.
+
+## Assumptions
+
+* This application will run on an OS with a system allocator available.
+
+* This application will likely be run on a mobile device or smart TV, and as
+  such should try to eliminate heap allocation and dynamic dispatch where
+  possible, and also put the CPU to sleep when applicable to consume less power.
+
+* This application will fetch and stream resources from the Internet as they
+  become available while avoiding blocking the main loop, and may require some
+  form of async concurrency in order to scale efficiently without spawning more
+  than two OS threads, one for the application and another for network I/O.
+
+* Cached files will not persist in between individual runs of the application.
+
+## Possible improvements
+
+* Draw rectangular cursor of selected menu tile with rounded corners.
+
+* Implement animations by passing the delta time between frames to
+  `Widget::update()` and using linear interpolation in `Menu::select_tile()` to
+  gradually select and deselect tiles.
+
+* Find (or write) an alternative async executor which allows for explicit
+  handling of out-of-memory errors.
+
+* Try to reduce heap allocations by using `serde` in zero-copy deserialization
+  mode and adding a lifetime to the `home.json` AST (thereby using `&str` over
+  `String` when possible). Perhaps the number of `String` and `Url` copies made
+  during resource fetching/polling could be reduced by sending references
+  instead of values over the channel, but this adds some design complexity to
+  preserve memory invariants.
+
+* Add logging and [Sentry](https://sentry.io/) integration for debugging.
+
+## Third-party Rust libraries
+
+* `anyhow` is used to eliminate boilerplate from error handling. This commonly
+   used crate eliminates the need to create your own error struct or enum for
+   application-type Rust projects (as opposed to library-type projects) and
+   reduces the number of manual implementations of `Debug`, `Display`, `From`,
+   and `std::error::Error` as well as conversions between them.
+
+* `flume` is a MPMC channel library that fixes numerous bugs and deficiencies
+  seen in `std::sync::mpsc`, and most notably works with mixed sync/async code.
+  This library is used for passing data between the synchronous rendering thread
+  and the asynchronous background I/O thread without blocking the main loop.
+
+* `fnv` provides a faster and cheaper hashing algorithm than the Rust standard
+  library, which is intended to be DoS resistant by default. We don't need this
+  protection for local rendering uses, though, and `fnv` performs _way_ better
+  during hot loops where map accesses and inserts are frequent.
+
+* `futures_util` contains common async traits not yet available in the Rust
+  standard library (e.g. `FutureExt`, `StreamExt`, and so on) as well as the
+  `Abortable` combinator and `poll_fn()` function used in tests.
+
+* `sdl2` provides native Rust bindings to SDL 2.0, as well as `SDL_image` and
+  `SDL_ttf` for image loading and font rendering, respectively.
+
+* `serde` and `serde_json` provide JSON deserialization with pretty good
+  performance for consuming the DSS `home.json` API.
+
+* `reqwest` is an async HTTP client used for fetching JSON and image files from
+  the DSS API while the main thread is busy rendering. It happens to include
+  `rustls` as an optional statically-linked pure Rust alternative to OpenSSL,
+  which is nice because it eliminates one more runtime dependency and
+  [uses less memory].
+
+[uses less memory]: https://jbp.io/2019/07/01/rustls-vs-openssl-performance.html
+
+* `tempfile` is used for locating the OS temporary directory and creating
+  temporary files that delete themselves after dropping, a facility not provided
+  by the Rust standard library.
+
+* `tokio` is used to spawn multiple async tasks and join them concurrently while
+  using minimal resources. Although Rust provides zero-cost async (in the C++
+  sense), it does not include an executor in the standard library to drive those
+  futures, requiring users to choose one from Crates.io or write their own
+  instead. This crate is compiled in single-threaded mode to stay lightweight.
+
+* `url` is used for parsing URL values from strings, both at deserialization
+  time and for use with `reqwest`.
+
+* `uuid` is used only for type-safety while deserializing UUIDs from JSON.
+
 ## Credits
 
 Includes the [Cocogoose Pro] TrueType font family, which is free for personal
