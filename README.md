@@ -73,9 +73,11 @@ cargo doc --open
 
 ## Usage
 
+The input controls for navigating the UI are listed below:
+
 Action        | Controls
 --------------|------------------------------------------------------------------
-Navigate menu | <kbd>Up</kbd>, <kbd>Down</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd>
+Navigate menu | <kbd>↑</kbd>, <kbd>↓</kbd>, <kbd>←</kbd>, <kbd>→</kbd>
 Close window  | <kbd>Esc</kbd> or "close" button
 
 ## Credits
