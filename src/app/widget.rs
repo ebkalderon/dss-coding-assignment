@@ -166,8 +166,9 @@ impl<'tc, W: Widget> Widgets<'tc, W> {
         // Mark the widget for initial drawing.
         root_widget.invalidate();
 
+        let root_id = WidgetId::root();
         let mut cache = HashMap::default();
-        cache.insert(WidgetId::root(), CacheEntry::new(root_widget, WidgetId(0)));
+        cache.insert(root_id, CacheEntry::new(root_widget, root_id));
 
         Widgets {
             cache,
