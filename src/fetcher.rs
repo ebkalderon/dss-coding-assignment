@@ -202,9 +202,16 @@ mod tests {
         let fetcher = spawn();
 
         let url: Url = EXAMPLE_URL.parse().unwrap();
-        let jobs: Vec<_> = (0..10)
-            .map(|_| future::poll_fn(|_| fetcher.poll_fetch(url.clone())).boxed_local())
-            .collect();
+        let jobs = (0..10).map(|_| {
+            future::poll_fn(|cx| {
+                let poll = fetcher.poll_fetch(url.clone());
+                if poll.is_pending() {
+                    cx.waker().wake_by_ref();
+                }
+                poll
+            })
+            .boxed_local()
+        });
 
         future::try_join_all(jobs)
             .await
